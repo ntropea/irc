@@ -26,5 +26,5 @@ int main(int ac, char **av)
 		return (1);
 	}
 	Server server(atoi(av[1]), av[2]);
-	std::cout << "Giovanni è un coglione" << std::endl;
+	server.run();
 }
