@@ -23,10 +23,19 @@ class	Server {
 		std::string			pass;
 		int					sock;
 		struct sockaddr_in	addr;
+		int					opt;
+		fd_set				read_set;
+		fd_set				write_set;
+		int					clients_sd[MAX_CLIENTS];
+		int					max_sd;
+		int					sd;
+		int					activity;
+		struct timeval 		timeout;
 	public:
 		Server(){};
 		Server(int port, std::string pass);
 		//Server(Server &cpy);
 		//Server &operator=(Server &cpy);
+		void run();
 		~Server();
 };
