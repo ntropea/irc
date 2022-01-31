@@ -15,6 +15,7 @@
 #include <iterator>
 #include <sstream>
 #include "Client.hpp"
+#include "RepliesCreator.hpp"
 
 #define MAX_CLIENTS 30
 
@@ -44,6 +45,10 @@ class	Server {
 		Server(int port, std::string pass);
 		//Server(Server &cpy);
 		//Server &operator=(Server &cpy);
+		std::string	getPass() {return pass;};
 		void run();
 		~Server();
 };
+
+int							parse_info(Client *new_client, char *buffer, int valread);
+std::vector<std::string>	ft_split(std::string str, std::string token);

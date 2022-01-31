@@ -42,7 +42,7 @@ std::string RepliesCreator::makeErrorNeedMoreParams(std::string CNick, std::stri
 {
 	std::string text;
 
-	text = CNick + " " + command + " :Not enough parameters" + DEL;
+	text = "461 " + CNick + " " + command + " :Not enough parameters" + DEL;
 	return (text);
 }
 
@@ -50,7 +50,7 @@ std::string RepliesCreator::makeErrorAlreadyRegistered(std::string CNick)
 {
 	std::string text;
 
-	text = CNick + " :You may not reregister" + DEL;
+	text = "462 " + CNick + " :You may not reregister" + DEL;
 	return (text);
 }
 
@@ -58,7 +58,7 @@ std::string RepliesCreator::makePasswdMisMatch(std::string CNick)
 {
 	std::string text;
 
-	text = CNick + " :Password incorrect" + DEL;
+	text = "464 " + CNick + " :Password incorrect" + DEL;
 	return (text);
 }
 
