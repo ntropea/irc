@@ -13,10 +13,10 @@ Server::Server(int port, std::string pass)
 		exit(EXIT_FAILURE);
 	}
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
-    {
-        perror("setsockopt failed");
-        exit(EXIT_FAILURE);
-    }
+	{
+		perror("setsockopt failed");
+		exit(EXIT_FAILURE);
+	}
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
@@ -58,8 +58,8 @@ std::vector<std::string> ft_split(std::string str, std::string token)
 int	parse_pass(Client *new_client, std::string s)
 {
 	std::vector<std::string>	raw_parse;
-	raw_parse = ft_split(s, " ");
-	if (raw_parse[1].compare(new_client->server->getPass()))
+	raw_parse = ft_split(s, " :");
+	if (!raw_parse[1].compare(new_client->server->getPass()))
 		return (1);
 	return (0);
 }
@@ -84,9 +84,9 @@ int	parse_info(Client *new_client, char *buffer, int valread)
 	std::string					raw_string(buffer, (size_t)valread);
 	std::string					sent;
 
+	std::cout << buffer << std::endl;
 	raw_parse = ft_split(raw_string, "\r\n");
-	if (raw_parse[0].find("PASS :") == std::string::npos){
-		std::cout << "Ciao" << std::endl;
+	if (!raw_parse[0].compare(0, 5, "PASS :")){
 		parse_nick(new_client, raw_parse[0]);
 		sent.append(reply.makePasswdMisMatch(new_client->getNick()));
 		send(new_client->getSd(), sent.c_str(), sent.length(), 0);
@@ -104,6 +104,7 @@ int	parse_info(Client *new_client, char *buffer, int valread)
 		parse_nick(new_client, raw_parse[1]);
 		parse_user(new_client, raw_parse[2]);
 	}
+	new_client->setLogged(true);
 	sent.append(reply.makeWelcome(new_client->getNick(), new_client->getUser(), "Irc"));
     sent.append(reply.makeYourHost("Irc", "2.1", new_client->getNick()));
     sent.append(reply.makeCreated("yesterday", new_client->getNick()));
@@ -113,7 +114,7 @@ int	parse_info(Client *new_client, char *buffer, int valread)
 
 void	Server::run()
 {
-	std::string	w = "Welcome to my IRC server! uwu";
+	std::string	w = "Welcome to my IRC server! uwu\n";
 	int valread = 0;
 	char buffer[1025];
 	while (1)
@@ -145,6 +146,11 @@ void	Server::run()
 				perror("Error");
 				exit(1);
 			}
+			if (setsockopt(new_sd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
+			{
+				perror("setsockopt failed");
+				exit(EXIT_FAILURE);
+			}
 			if ((send(new_sd, w.c_str(), w.length(), 0)) < 0)
 				perror("Error");
 			for (int i = 0; i < MAX_CLIENTS; i++)
@@ -167,13 +173,14 @@ void	Server::run()
             {
                 if ((valread = read(sd, buffer, 1024)) == 0)
                 {
-                    getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);  
-                    std::cout << "The disconnected host was named " << map.find(sd)->second->getUser() << std::endl;
-                    printf("Host disconnected , sd is %d, ip %s , port %d \n" , sd, 
-                          inet_ntoa(addr.sin_addr) , ntohs(addr.sin_port));
+					getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);  
+					std::cout << "The disconnected host was named " << map.find(sd)->second->getUser() << std::endl;
+					printf("Host disconnected , sd is %d, ip %s , port %d \n" , sd, 
+							inet_ntoa(addr.sin_addr) , ntohs(addr.sin_port));
+					//map.find(sd)->second->setLogged(false);
 					delete	map.find(sd)->second;
 					map.erase(sd);
-                    close(sd);
+                   	close(sd);
                     clients_sd[i] = 0;
                 }
                 else
@@ -183,18 +190,22 @@ void	Server::run()
 					{
 						if (parse_info(map.find(sd)->second, buffer, valread) == -1)
 						{
+							getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);  
+							std::cout << "The disconnected host was named " << map.find(sd)->second->getUser() << std::endl;
+							printf("Host disconnected , sd is %d, ip %s , port %d \n" , sd, 
+								inet_ntoa(addr.sin_addr) , ntohs(addr.sin_port));
+							map.find(sd)->second->setLogged(false);
 							delete	map.find(sd)->second;
 							map.erase(sd);
 							close(sd);
 							clients_sd[i] = 0;
 						}
+					} else {
+						std::cout << buffer << std::endl;
+                    	std::cout << "this is parse_commands shit" << std::endl;
+                    	//parse_commands(mappa.find(sd)->second, buffer, valread);
+                    	//send(sd, buffer, strlen(buffer), 0);
 					}
-                    else if (map.find(sd)->second->getLog() == true)
-					{
-                        std::cout << "this is parse_commands shit" << std::endl;
-                        //parse_commands(mappa.find(sd)->second, buffer, valread);
-					}
-                    //send(sd, buffer, strlen(buffer), 0);
                 }
             }
         }

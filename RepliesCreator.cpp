@@ -2,12 +2,12 @@
 
 RepliesCreator::RepliesCreator()
 {
-	std::cout << "RepliesCreator created" << std::endl;
+	//std::cout << "RepliesCreator created" << std::endl;
 }
 
 RepliesCreator::~RepliesCreator()
 {
-	std::cout << "RepliesCreator deleted" << std::endl;
+	//std::cout << "RepliesCreator deleted" << std::endl;
 }
 
 /**PUBBLIC-FUNCTIONS**/
