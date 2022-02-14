@@ -2,6 +2,7 @@
 
 void	quitCmd(Client *client, std::vector<std::string> splitted)
 {
+	std::cout << "cout\n";
 	std::string msg;
 	if (splitted.size() > 1)
 	{

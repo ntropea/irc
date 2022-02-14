@@ -3,7 +3,7 @@ NAME = ircserv
 SRCS = main.cpp Server.cpp RepliesCreator.cpp Client.cpp Command.cpp
 
 CC = clang++
-CFLAGS = -Wall -Wextra -Werror
+CFLAGS = -Wall -Wextra -Werror -g
 RM = rm -f
 OBJS = $(SRCS:.cpp=.o)
 
