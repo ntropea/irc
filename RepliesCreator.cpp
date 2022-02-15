@@ -167,7 +167,10 @@ std::string RepliesCreator::makeErrorNoPrivileges(std::string CNick)
 	return text;
 }
 
-std::string RepliesCreator::makeErrorUModeUnknownFlag()
+std::string RepliesCreator::makeErrorUModeUnknownFlag(std::string CNick)
 {
-	return ("501 :Unkown MODE flag");
+	std::string text;
+
+	text = "501 " + CNick + " :Unknown mode char" + DEL;
+	return text;
 }

@@ -31,6 +31,6 @@ class RepliesCreator
 		std::string makeErrorNotOnChannel(std::string ChName);
 		std::string makeErrorUserOnChannel(std::string nick, std::string channel);
 		std::string makeErrorNoPrivileges(std::string CNick);
-		std::string makeErrorUModeUnknownFlag();		
+		std::string makeErrorUModeUnknownFlag(std::string CNick);		
 	private:
 };
