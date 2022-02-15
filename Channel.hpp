@@ -16,14 +16,12 @@ class	Channel
 		Channel(std::string name, Client *creator, bool invite) {
 			_invite = invite;
 			_name = name;
-			_clients.insert(creator);
-			_mods.insert(creator);
 		};
 		~Channel() {};
 		std::string getName(){return _name;};
-		void		setName(std::string name){ _name = name};
+		void		setName(std::string name){ _name = name;};
 		std::string getTopic(){return _topic;};
-		void		setTopic(std::string topic){ _topic = topic};
+		void		setTopic(std::string topic){ _topic = topic;};
 		int			size(){return _clients.size();};
-		Client*		getClient(int sd) {return _clients.find(sd);};
+		Client*		getClient(int sd) {return _clients.find(sd)->second;};
 };

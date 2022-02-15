@@ -42,7 +42,7 @@ class	Server {
 		int										new_sd;
 		std::map<int, Client*>					map;
 		std::map<int, Client*>::iterator		it;
-		stf::map<std::string, Channel> 			channel_map;
+		std::map<std::string, Channel*> 		channel_map;
 
 	public:
 		Server(){};
