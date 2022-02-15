@@ -1,6 +1,8 @@
 #include "Server.hpp"
 #include "Command.hpp"
 
+
+
 Server::Server(int port, std::string pass)
 {
 	this->port = port;
@@ -60,15 +62,11 @@ int	parse_pass(Client *new_client, std::string s)
 {
 	std::vector<std::string>	raw_parse;
 	raw_parse = ft_split(s, " :");
-	//raw_parse[1].resize(new_client->server->getPass().length());
 	if (raw_parse[1][raw_parse[1].length()-1] == '\n')
 		raw_parse[1].resize(raw_parse[1].length() - 1); 
-	std::cout << new_client->server->getPass().length() << std::endl;
-	std::cout << raw_parse[1].length() << std::endl;
 	if (!new_client->server->getPass().compare(raw_parse[1]))
 		return(1);
 	return (0);
-	//if (!strcmp(raw_parse[1].c_str(), new_client->server->getPass().c_str()))
 }
 
 void	parse_nick(Client *new_client, std::string s)
@@ -124,16 +122,24 @@ int	parse_info(Client *new_client, char *buffer, int valread)
 
 void	parse_commands(Client *client, char *buffer, int valread)
 {
-
+	std::cout << "Client id " << client->getSd() << ": " << buffer << std::endl;
 	std::vector<std::string> splitted;
 	std::string buf(buffer, (size_t)valread);
 	splitted = ft_split(buf, " ");
-	//if (!splitted[0].compare("QUIT"))
-	if (!strncmp(buffer, "QUIT", 4))
-		quitCmd(client, splitted);
-	else
-		return ;
+	return ;
 }
+
+
+void	Server::client_dc(int sd, int i)
+{
+	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);  
+	std::cout << "The disconnected host was named " << map.find(sd)->second->getUser() << std::endl;
+	map.find(sd)->second->setLogged(false);
+	map.erase(sd);
+	close(sd);
+	clients_sd[i] = 0;
+}
+
 
 void	Server::run()
 {
@@ -143,28 +149,19 @@ void	Server::run()
 	while (1)
 	{
 		FD_ZERO(&read_set);						//impostiamo tutto a 0
-		FD_ZERO(&write_set);
 		FD_SET(sock, &read_set);				//mettiamo fd del server dentro array di fd
-		FD_SET(sock, &write_set);
 		max_sd = sock;
 		for (int i = 0; i < MAX_CLIENTS; i++) 	//tramite il nostro array di client, risistemiamo gli fd in readset
 		{
 			sd = clients_sd[i];
 			if (sd > 0)
-			{
 				FD_SET(sd, &read_set);
-				FD_SET(sd, &write_set);
-			}
 			if (sd > max_sd)
 				max_sd = sd;
 		}
-		activity = select(max_sd + 1, &read_set, &write_set, NULL, NULL); //qua rimane in loop
+		activity = select(max_sd + 1, &read_set, NULL, NULL, NULL); //qua rimane in loop
         if ((activity < 0) && (errno != EINTR))
-		{
             perror("Error select");
-			sleep(5);
-			exit(1);
-		}
 		//If something happened on the master socket , 
         //then its an incoming connection
 		if (FD_ISSET(sock, &read_set))
@@ -202,50 +199,23 @@ void	Server::run()
             if (FD_ISSET(sd, &read_set))
             {
 				//controllo se qualcuno si é disconnesso e controllo nuovi messaggi
-                if ((valread = read(sd, buffer, 1024)) == 0)
-                {
-					std::cout << "e qua?\n";
-					//qualcuno si é disconnesso
-					getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);  
-					std::cout << "The disconnected host was named " << map.find(sd)->second->getUser() << std::endl;
-					map.find(sd)->second->setLogged(false);
-                   	close(sd);
-                    clients_sd[i] = 0;
-                }
+                if ((valread = read(sd, buffer, 1024)) == 0) //Se ha fatto cntrl c
+					client_dc(sd, i);
                 else
                 {
                     buffer[valread] = '\0';
 					//se non é piú loggato
-                    if (map.find(sd)->second->getLog() == false)
+                    if (map.find(sd)->second->getLog() == false) //se é la prima connessione e non ha loggato
 					{
-						std::cout << "sono entrato nell'if\n";
 						if (parse_info(map.find(sd)->second, buffer, valread) == -1)
-						{
-					 		std::cout << "ci entro mai?" << std::endl;
-							getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);  
-							std::cout << "The disconnected host was named " << map.find(sd)->second->getUser() << std::endl;
-							map.find(sd)->second->setLogged(false);
-							close(sd);
-							clients_sd[i] = 0;
-						}
-					} 
-					else {
-						//std::cout << buffer << std::endl;
+							client_dc(sd, i);
+					}
+					else 
+					{
 						if (!strncmp(buffer, "QUIT", 4))
-						{
-							FD_CLR(sd, &read_set);
-							FD_CLR(sd, &write_set);
-							getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);  
-							std::cout << "The disconnected host was named " << map.find(sd)->second->getUser() << std::endl;
-							map.find(sd)->second->setLogged(false);
-							close(sd);
-							clients_sd[i] = 0;
-						}
+							client_dc(sd, i);
 						else
                     		parse_commands(map.find(sd)->second, buffer, valread);
-                    	//std::cout << "this is parse_commands shit" << std::endl;
-						//std::cout << "Client id " << i << ": " << buffer;
-
 					}
                 }
             }

@@ -16,37 +16,40 @@
 #include <sstream>
 #include "Client.hpp"
 #include "RepliesCreator.hpp"
+#include "Channel.hpp"
 
 #define MAX_CLIENTS 30
 
 class	Client;
 
+class	Channel;
+
 class	Server {
 	private:
-		int						port;
-		std::string				pass;
-		int						sock;
-		struct sockaddr_in		addr;
-		int						addrlen;
-		int						opt;
-		fd_set					read_set;
-		fd_set					write_set;
-		int						clients_sd[MAX_CLIENTS];
-		int						max_sd;
-		int						sd;
-		int						activity;
-		struct timeval 			timeout;
-		int						new_sd;
-		std::map<int, Client*>	map;
-		std::map<int, Client*>::iterator	it;
+		int										port;
+		std::string								pass;
+		int										sock;
+		struct sockaddr_in						addr;
+		int										addrlen;
+		int										opt;
+		fd_set									read_set;
+		fd_set									write_set;
+		int										clients_sd[MAX_CLIENTS];
+		int										max_sd;
+		int										sd;
+		int										activity;
+		struct timeval 							timeout;
+		int										new_sd;
+		std::map<int, Client*>					map;
+		std::map<int, Client*>::iterator		it;
+		stf::map<std::string, Channel> 			channel_map;
 
 	public:
 		Server(){};
 		Server(int port, std::string pass);
-		//Server(Server &cpy);
-		//Server &operator=(Server &cpy);
 		std::string	getPass() {return pass;};
-		void run();
+		void		client_dc(int sd, int i);
+		void 		run();
 		~Server();
 };
 
