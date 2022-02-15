@@ -120,15 +120,25 @@ int	parse_info(Client *new_client, char *buffer, int valread)
 	return (0);
 }
 
-void	parse_commands(Client *client, char *buffer, int valread)
+void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 {
-	std::cout << "Client id " << client->getSd() << ": " << buffer << std::endl;
+	std::string sent;
+	RepliesCreator reply;
 	std::vector<std::string> splitted;
 	std::string buf(buffer, (size_t)valread);
 	splitted = ft_split(buf, " ");
-	return ;
+	if (!strncmp(buffer, "QUIT", 4))
+		client_dc(sd, i);
+	else if (!strncmp(buffer, "JOIN", 4))
+		join(client, splitted);
+	else
+	{
+		if (splitted[0][splitted[0].length() - 1] == '\n')
+			splitted[0].pop_back();
+		sent.append(reply.makeErrorUnknownCommand(splitted[0]));
+		send(client->getSd(), sent.c_str(), sent.length(), 0);
+	}
 }
-
 
 void	Server::client_dc(int sd, int i)
 {
@@ -210,13 +220,8 @@ void	Server::run()
 						if (parse_info(map.find(sd)->second, buffer, valread) == -1)
 							client_dc(sd, i);
 					}
-					else 
-					{
-						if (!strncmp(buffer, "QUIT", 4))
-							client_dc(sd, i);
-						else
-                    		parse_commands(map.find(sd)->second, buffer, valread);
-					}
+					else
+                    	parse_commands(map.find(sd)->second, buffer, valread, i);
                 }
             }
         }

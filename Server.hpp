@@ -49,7 +49,9 @@ class	Server {
 		Server(int port, std::string pass);
 		std::string	getPass() {return pass;};
 		void		client_dc(int sd, int i);
+		void		join(Client *client, std::vector<std::string> splitted);
 		void 		run();
+		void		parse_commands(Client *client, char *buffer, int valread, int i);
 		~Server();
 };
 
