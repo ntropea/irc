@@ -21,7 +21,7 @@ class RepliesCreator
 		std::string makeErrorNickNameInUse(std::string CNick, std::string nick);
 		std::string makePasswdMisMatch(std::string CNick);
 		std::string makeErrorNoSuchNick(std::string Name);
-		std::string makeErrorNoSuchChannel(std::string ChName);
+		std::string makeErrorNoSuchChannel(std::string nick, std::string ChName);
 		std::string makeErrorCannotSentToChan(std::string ChName);
 		std::string makeErrorTooManyChannels(std::string Name);
 		std::string makeErrorNoOrigin(std::string Nick);

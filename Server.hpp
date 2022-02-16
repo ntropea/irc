@@ -16,7 +16,7 @@
 #include <sstream>
 #include "Client.hpp"
 #include "RepliesCreator.hpp"
-#include "Channel.hpp"
+//#include "Channel.hpp"
 
 #define MAX_CLIENTS 30
 

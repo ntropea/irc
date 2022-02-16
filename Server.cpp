@@ -128,9 +128,9 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 	std::string buf(buffer, (size_t)valread);
 	splitted = ft_split(buf, " ");
 	if (!strncmp(buffer, "QUIT", 4))
-		client_dc(sd, i);
+		client_dc(sd, i); 
 	else if (!strncmp(buffer, "JOIN", 4))
-		join(client, splitted);
+		joinCmd(client, splitted);
 	else
 	{
 		if (splitted[0][splitted[0].length() - 1] == '\n')
@@ -142,7 +142,8 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 
 void	Server::client_dc(int sd, int i)
 {
-	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);  
+	send(sd, "GOODBYE :)))))))))))\n", 22, 0);
+	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);
 	std::cout << "The disconnected host was named " << map.find(sd)->second->getUser() << std::endl;
 	map.find(sd)->second->setLogged(false);
 	map.erase(sd);

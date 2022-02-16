@@ -46,11 +46,11 @@ std::string RepliesCreator::makeErrorNoSuchNick(std::string Name)
 	return (text);
 }
 
-std::string RepliesCreator::makeErrorNoSuchChannel(std::string ChName)
+std::string RepliesCreator::makeErrorNoSuchChannel(std::string nick, std::string ChName)
 {
 	std::string text;
 
-	text = "403 " + ChName + " :No such channel" + DEL;
+	text = "403 "  + nick + " " + ChName + " :No such channel" + DEL;
 	return (text);
 }
 
