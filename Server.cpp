@@ -1,7 +1,4 @@
 #include "Server.hpp"
-#include "Command.hpp"
-
-
 
 Server::Server(int port, std::string pass)
 {
@@ -144,9 +141,9 @@ void	Server::client_dc(int sd, int i)
 {
 	send(sd, "GOODBYE :)))))))))))\n", 22, 0);
 	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);
-	std::cout << "The disconnected host was named " << map.find(sd)->second->getUser() << std::endl;
-	map.find(sd)->second->setLogged(false);
-	map.erase(sd);
+	std::cout << "The disconnected host was named " << client_map.find(sd)->second->getUser() << std::endl;
+	client_map.find(sd)->second->setLogged(false);
+	client_map.erase(sd);
 	close(sd);
 	clients_sd[i] = 0;
 }
@@ -198,7 +195,7 @@ void	Server::run()
 					clients_sd[i] = new_sd;
 					new_client->setSd(new_sd);
 					new_client->server = this;
-					map.insert(std::make_pair(clients_sd[i], new_client));
+					client_map.insert(std::make_pair(clients_sd[i], new_client));
 					break ;
 				}
 			}
@@ -216,13 +213,13 @@ void	Server::run()
                 {
                     buffer[valread] = '\0';
 					//se non é piú loggato
-                    if (map.find(sd)->second->getLog() == false) //se é la prima connessione e non ha loggato
+                    if (client_map.find(sd)->second->getLog() == false) //se é la prima connessione e non ha loggato
 					{
-						if (parse_info(map.find(sd)->second, buffer, valread) == -1)
+						if (parse_info(client_map.find(sd)->second, buffer, valread) == -1)
 							client_dc(sd, i);
 					}
 					else
-                    	parse_commands(map.find(sd)->second, buffer, valread, i);
+                    	parse_commands(client_map.find(sd)->second, buffer, valread, i);
                 }
             }
         }

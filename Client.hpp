@@ -1,7 +1,5 @@
 #pragma once
-
-#include "Server.hpp"
-
+#include <iostream>
 class Server;
 
 class Client	{
