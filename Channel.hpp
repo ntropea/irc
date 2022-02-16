@@ -10,14 +10,12 @@ class	Channel
 		std::map<int, Client*>	_clients;
 		std::string				_topic;
 		std::map<int, Client*>	_mods;
-		bool					_invite;
 	public:
-		Channel() {
-
-		};
-		Channel(std::string name, Client *creator, bool invite) {
-			_invite = invite;
+		Channel() {};
+		Channel(std::string name, Client *creator) {
 			_name = name;
+			_clients.insert(std::make_pair(creator->getSd(), creator));
+			_mods.insert(std::make_pair(creator->getSd(), creator));
 		};
 		~Channel() {};
 		std::string getName(){return _name;};
