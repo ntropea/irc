@@ -62,18 +62,29 @@ class	Server {
 		{
 			RepliesCreator reply;
 			std::string msg;
+			if (splitted[1][splitted[1].length() - 1] == '\n')
+				splitted[1].resize(splitted[1].length() - 2);
 			if (splitted[1][0] != '#')
 			{
-				if (splitted[1][splitted[1].length() - 1] == '\n')
-					splitted[1].resize(splitted[1].length() - 2);
 				msg.append(reply.makeErrorNoSuchChannel(client->getNick(), splitted[1]));
 				send(client->getSd(), msg.c_str(), msg.length(), 0);
 			}
 			else
 			{
 				Channel *new_channel = new Channel(splitted[1], client);
+				std::string sent;
+				sent.append(client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + splitted[1] + "\n");
+				send(client->getSd(), sent.c_str(), sent.length(), 0);
+				sent.clear();
+				sent.append(":127.0.0.1 353 " + client->getNick() + " = " + splitted[1] + " :@" + client->getNick() + "\n");
 				std::cout << "benvenuto.\n";
 				client->server->getChannelMap().insert(std::make_pair(splitted[1], new_channel));
+				send(client->getSd(), sent.c_str(), sent.length(), 0);
+				sent.clear();
+				sent.append(":127.0.0.1 366 " + client->getNick() + " " + splitted[1] + " :End of /NAMES list.\n331\n");
+				send(client->getSd(), sent.c_str(), sent.length(), 0);
+
+
 				//std::cout << client->server->getChannelMap().find(splitted[1])->first << std::endl;
 			}
 		}
