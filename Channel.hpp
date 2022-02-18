@@ -14,7 +14,7 @@ class	Channel
 		Channel() {};
 		Channel(std::string name, Client *creator) {
 			_name = name;
-			_clients.insert(std::make_pair(creator->getSd(), creator));
+			//_clients.insert(std::make_pair(creator->getSd(), creator));
 			_mods.insert(std::make_pair(creator->getSd(), creator));
 		};
 		~Channel() {};
@@ -24,4 +24,6 @@ class	Channel
 		void		setTopic(std::string topic){ _topic = topic;};
 		int			size(){return _clients.size();};
 		Client*		getClient(int sd) {return _clients.find(sd)->second;};
+		std::map<int, Client*>		getClientMap() {return _clients;};
+		std::map<int, Client*>		getModMap() {return _mods;};
 };

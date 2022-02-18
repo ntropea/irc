@@ -17,6 +17,9 @@
 #include "Client.hpp"
 #include "Channel.hpp"
 #include "RepliesCreator.hpp"
+#define IP "127.0.0.1"
+#define RPL_NAMREPLY			"353"
+#define RPL_ENDOFNAME			"366"
 //#include "Channel.hpp"
 
 #define MAX_CLIENTS 30
@@ -58,6 +61,24 @@ class	Server {
 		/***************************** COMMANDS *****************************/
 		void	userCmd();
 		void	pingCmd();
+		Channel* findChannel(std::string nameChannel)
+		{
+			for(std::map<std::string, Channel*>::iterator i = channel_map.begin(); i != channel_map.end(); i++)
+			{
+				if (!i->first.compare(nameChannel))
+					return(i->second);
+			}
+			return(NULL);
+		};
+		std::vector<Client*> clientInMap(std::map<int, Client*> map)
+		{
+			std::vector<Client*> vec;
+			for(std::map<int, Client*>::iterator i = map.begin(); i != map.end(); i++)
+			{
+				vec.push_back(i->second);
+			}
+			return vec;
+		};
 		void	joinCmd(Client *client, std::vector<std::string> splitted)
 		{
 			RepliesCreator reply;
@@ -71,21 +92,47 @@ class	Server {
 			}
 			else
 			{
-				Channel *new_channel = new Channel(splitted[1], client);
-				std::string sent;
-				sent.append(client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + splitted[1] + "\n");
-				send(client->getSd(), sent.c_str(), sent.length(), 0);
-				sent.clear();
-				sent.append(":127.0.0.1 353 " + client->getNick() + " = " + splitted[1] + " :@" + client->getNick() + "\n");
-				std::cout << "benvenuto.\n";
-				client->server->getChannelMap().insert(std::make_pair(splitted[1], new_channel));
-				send(client->getSd(), sent.c_str(), sent.length(), 0);
-				sent.clear();
-				sent.append(":127.0.0.1 366 " + client->getNick() + " " + splitted[1] + " :End of /NAMES list.\n331\n");
-				send(client->getSd(), sent.c_str(), sent.length(), 0);
-
-
-				//std::cout << client->server->getChannelMap().find(splitted[1])->first << std::endl;
+				Channel* chan = findChannel(splitted[1]);
+				if(chan != NULL)
+				{
+					std::string sent;
+					sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + splitted[1] + "\n");
+					send(client->getSd(), sent.c_str(), sent.length(), 0);
+					sent.clear();					
+					chan->getClientMap().insert(std::make_pair(client->getSd(), client));
+					std::vector<Client*> vec = clientInMap(chan->getModMap());
+					for(int k = 0; k != vec.size(); k++)
+					{
+						sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + splitted[1] + " :@" + vec[k]->getNick() + "\n");
+						send(client->getSd(), sent.c_str(), sent.length(), 0);
+						sent.clear();
+					}
+					std::vector<Client*> vec2 = clientInMap(chan->getClientMap());
+					for(int k = 0; k != vec2.size(); k++)
+					{
+						sent.append(":127.0.0.1 353 " + vec2[k]->getNick() + " = " + splitted[1] + " :" + vec2[k]->getNick() + "\n");
+						send(client->getSd(), sent.c_str(), sent.length(), 0);
+						sent.clear();
+					}
+					sent.append(":127.0.0.1 366 " + client->getNick() + " " + splitted[1] + " :End of /NAMES list.\n331\n");
+					send(client->getSd(), sent.c_str(), sent.length(), 0);
+					std::cout << "benvenuto.\n";
+				}
+				else
+				{
+					Channel *new_channel = new Channel(splitted[1], client);
+					std::string sent;
+					sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + splitted[1] + "\n");
+					send(client->getSd(), sent.c_str(), sent.length(), 0);
+					sent.clear();
+					sent.append(":127.0.0.1 353 " + client->getNick() + " = " + splitted[1] + " :@" + client->getNick() + "\n");
+					std::cout << "benvenuto.\n";
+					send(client->getSd(), sent.c_str(), sent.length(), 0);
+					sent.clear();
+					sent.append(":127.0.0.1 366 " + client->getNick() + " " + splitted[1] + " :End of /NAMES list.\n331\n");
+					send(client->getSd(), sent.c_str(), sent.length(), 0);
+					channel_map.insert(std::make_pair(splitted[1], new_channel));
+				}
 			}
 		}
 		void	nickCmd();
