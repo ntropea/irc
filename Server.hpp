@@ -55,9 +55,6 @@ class	Server {
 		void		parse_commands(Client *client, char *buffer, int valread, int i);
 		std::map<std::string, Channel*>	getChannelMap() { return channel_map; };
 
-
-
-
 		/***************************** COMMANDS *****************************/
 		void	userCmd();
 		void	pingCmd();
@@ -99,20 +96,31 @@ class	Server {
 					sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + splitted[1] + "\n");
 					send(client->getSd(), sent.c_str(), sent.length(), 0);
 					sent.clear();					
-					chan->getClientMap().insert(std::make_pair(client->getSd(), client));
-					std::vector<Client*> vec = clientInMap(chan->getModMap());
+					chan->insert(client);
+					std::vector<Client*> vec = clientInMap(chan->getClientMap());
 					for(int k = 0; k != vec.size(); k++)
 					{
-						sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + splitted[1] + " :@" + vec[k]->getNick() + "\n");
-						send(client->getSd(), sent.c_str(), sent.length(), 0);
-						sent.clear();
+						if (vec[k]->getMod())
+						{
+							sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + splitted[1] + " :@" + vec[k]->getNick() + "\n");
+							send(client->getSd(), sent.c_str(), sent.length(), 0);
+							sent.clear();
+						}
 					}
-					std::vector<Client*> vec2 = clientInMap(chan->getClientMap());
-					for(int k = 0; k != vec2.size(); k++)
+					/*for (std::map<int, Client*>::iterator it = chan->getClientMap().begin(); it != chan->getClientMap().end(); it++)
 					{
-						sent.append(":127.0.0.1 353 " + vec2[k]->getNick() + " = " + splitted[1] + " :" + vec2[k]->getNick() + "\n");
+						sent.append(":127.0.0.1 353 " + it->second->getNick() + " = " + splitted[1] + " :@" + it->second->getNick() + "\n");
 						send(client->getSd(), sent.c_str(), sent.length(), 0);
 						sent.clear();
+					}*/
+					for(int k = 0; k != vec.size(); k++)
+					{
+						if (!vec[k]->getMod())
+						{
+							sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + splitted[1] + " :" + vec[k]->getNick() + "\n");
+							send(client->getSd(), sent.c_str(), sent.length(), 0);
+							sent.clear();
+						}
 					}
 					sent.append(":127.0.0.1 366 " + client->getNick() + " " + splitted[1] + " :End of /NAMES list.\n331\n");
 					send(client->getSd(), sent.c_str(), sent.length(), 0);
@@ -121,6 +129,7 @@ class	Server {
 				else
 				{
 					Channel *new_channel = new Channel(splitted[1], client);
+					client->setMod(true);
 					std::string sent;
 					sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + splitted[1] + "\n");
 					send(client->getSd(), sent.c_str(), sent.length(), 0);
