@@ -128,6 +128,8 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 		client_dc(sd, i); 
 	else if (!strncmp(buffer, "JOIN", 4))
 		joinCmd(client, splitted);
+	else if (!strncmp(buffer, "PING", 4))
+		pingCmd(client, splitted);
 	else
 	{
 		if (splitted[0][splitted[0].length() - 1] == '\n')

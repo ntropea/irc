@@ -57,7 +57,27 @@ class	Server {
 
 		/***************************** COMMANDS *****************************/
 		void	userCmd();
-		void	pingCmd();
+		void	pingCmd(Client *client, std::vector<std::string> splitted)
+		{
+			std::string msg;
+			RepliesCreator reply;
+
+			if (splitted.size() < 2)
+				msg.append(reply.makeErrorNoOrigin(client->getNick()));
+			else if (splitted.size() == 2)
+			{
+				if (splitted[1][splitted[1].length() - 1] == '\n')
+					splitted[1].resize(splitted[1].length() - 2);
+				msg.append("PONG " + splitted[1] + "\n");
+			}
+			else
+			{
+				if (splitted[2][splitted[2].length() - 1] == '\n')
+					splitted[2].resize(splitted[2].length() - 2);
+				msg.append("PONG " + splitted[2] + " " + splitted[1] + "\n");
+			}
+			send(client->getSd(), msg.c_str(), msg.length(), 0);
+		};
 		Channel* findChannel(std::string nameChannel)
 		{
 			for(std::map<std::string, Channel*>::iterator i = channel_map.begin(); i != channel_map.end(); i++)
@@ -107,12 +127,6 @@ class	Server {
 							sent.clear();
 						}
 					}
-					/*for (std::map<int, Client*>::iterator it = chan->getClientMap().begin(); it != chan->getClientMap().end(); it++)
-					{
-						sent.append(":127.0.0.1 353 " + it->second->getNick() + " = " + splitted[1] + " :@" + it->second->getNick() + "\n");
-						send(client->getSd(), sent.c_str(), sent.length(), 0);
-						sent.clear();
-					}*/
 					for(int k = 0; k != vec.size(); k++)
 					{
 						if (!vec[k]->getMod())
