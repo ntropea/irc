@@ -158,7 +158,31 @@ class	Server {
 				}
 			}
 		}
-		void	nickCmd();
+		void	nickCmd(Client *client, std::vector<std::string> splitted)
+		{
+			std::string		msg;
+			RepliesCreator	reply;
+
+			if (splitted.size() == 1)
+			{
+				if (splitted[0][splitted[0].length() - 1] == '\n')
+					splitted[0].resize(splitted[0].length() - 2);
+				msg.append(reply.makeErrorNeedMoreParams(client->getNick(), splitted[0]));
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+			}
+			else
+			{
+				if (splitted[1][splitted[1].length() - 1] == '\n')
+					splitted[1].resize(splitted[1].length() - 2);
+				if (splitted[1].compare(client->getNick()))
+				{
+					msg.append(":" + client->getNick() + " ");
+					client->setNick(splitted[1]);
+					msg.append("NICK :" + splitted[1] + "\n");
+					send(client->getSd(), msg.c_str(), msg.length(), 0);
+				}
+			}
+		}
 		void	quitCmd(Client *client, std::vector<std::string> splitted)
 		{
 			std::string msg;
