@@ -198,7 +198,35 @@ class	Server {
 			client->setLogged(false);
 			close(client->getSd());
 		}
-		void	privmsgCmd();
+		void	privmsgCmd(Client *client, std::vector<std::string> splitted) //da finire
+		{
+			std::string					msg;
+			RepliesCreator				reply; //forse dovremmo levare replies creator e scrivere le cose direttamente??
+			std::vector<std::string>	nicks; //se ci sono le virgole in splitted[1], ovvero una lista di utenti, si dovrebbe splittare per ',' e mandare il messaggio a tutti gli utenti della lista
+
+			if (splitted.size() == 1) // se c'è solo PRIVMSG
+			{
+				if (splitted[0][splitted[0].length() - 1] == '\n')
+					splitted[0].resize(splitted[0].length() - 2); //dovremmo provare a farlo direttamente senza if
+				msg.append("411 " + client->getNick() + " :No recipient given (PRIVMSG)\n");
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+			}
+			else //prima devo controllare che il nickname (o tutti quelli in lista? da checkare) esista, poi subito dopo controllo se c'è un messaggio (splitted[2]...)
+			{
+				nicks = ft_split(splitted[1], ","); //(splitto per ',' per ottenere la lista di utenti e canali a cui mandare il messaggio (devo controllare se accetta gli spazi ma mi pare di no))
+				if (splitted[1][splitted[1].length() - 1] == '\n')
+					splitted[1].resize(splitted[0].length() - 2);
+				for (std::map<int, Client*>::iterator it; it = client_map.begin(); it++)
+				{
+					if (!it->second->getNick().compare(splitted[1]))
+					{
+						break ;
+					}
+					//se il messaggio comincia con ':', bisogna concatenare tutt gli splitted successivi al 2 (e potrebbe essere un problema perché noi splittiamo per gli spazi, e non so se vengono trimmati)
+					//altrimenti, viene considerato solo splitted[2]
+				}
+			}
+		}
 		void	partCmd();
 		void	listCmd();
 		void	whoCmd();

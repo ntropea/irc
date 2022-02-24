@@ -132,6 +132,8 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 		pingCmd(client, splitted);
 	else if (!strncmp(buffer, "NICK", 4))
 		nickCmd(client, splitted);
+	else if (!strncmp(buffer, "PRIVMSG", 7))
+		privmsgCmd(client, splitted);
 	else
 	{
 		if (splitted[0][splitted[0].length() - 1] == '\n')
