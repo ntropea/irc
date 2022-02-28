@@ -126,14 +126,19 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 	splitted = ft_split(buf, " ");
 	if (!strncmp(buffer, "QUIT", 4))
 		client_dc(sd, i); 
-	else if (!strncmp(buffer, "JOIN", 4))
-		joinCmd(client, splitted);
+	else if (!strncmp(buffer, "JOIN", 4)){
+		std::cout << buf << std::endl;
+		joinCmd(client, splitted);}
 	else if (!strncmp(buffer, "PING", 4))
 		pingCmd(client, splitted);
 	else if (!strncmp(buffer, "NICK", 4))
 		nickCmd(client, splitted);
-	else if (!strncmp(buffer, "PRIVMSG", 7))
-		privmsgCmd(client, splitted);
+	/*else if (!strncmp(buffer, "PRIVMSG", 7))
+		privmsgCmd(client, splitted);*/
+	else if (!strncmp(buffer, "WHO", 3))
+		whoCmd(client, splitted);
+	else if (!strncmp(buffer, "MODE", 4))
+		modeCmd(client, splitted);
 	else
 	{
 		if (splitted[0][splitted[0].length() - 1] == '\n')

@@ -198,6 +198,18 @@ class	Server {
 			client->setLogged(false);
 			close(client->getSd());
 		}
+		void	whoCmd(Client *client, std::vector<std::string>splitted)
+		{
+			std::string msg = "352 " + client->getNick() + "315";
+			send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
+		}
+
+		void	modeCmd(Client *client, std::vector<std::string>splitted)
+		{
+			std::string msg = "324 " + client->getNick() + "329";
+			send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
+		}
+		/*
 		void	privmsgCmd(Client *client, std::vector<std::string> splitted) //da finire
 		{
 			std::string					msg;
@@ -226,7 +238,9 @@ class	Server {
 					//altrimenti, viene considerato solo splitted[2]
 				}
 			}
+			
 		}
+		*/
 		void	partCmd();
 		void	listCmd();
 		void	whoCmd();
