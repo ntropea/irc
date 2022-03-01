@@ -96,6 +96,20 @@ class	Server {
 			}
 			return vec;
 		};
+
+		void	sendAll(std::vector<Client*> vec, std::string channel, Client* client)
+		{
+			std::string msg;
+
+			for(int k = 0; k != vec.size(); k++)
+			{
+				msg.append(":" + vec[k]->getNick() + "!~" + vec[k]->getUser() + " JOIN :" + channel + DEL);
+				send(vec[k]->getSd(), msg.c_str(), msg.length(), 0);
+				msg.clear();
+			}
+
+			//:benjolo2!~benjo2@Azzurra-3476AEA0.business.telecomitalia.it JOIN :#woww
+		}
 		void	joinCmd(Client *client, std::vector<std::string> splitted)
 		{
 			RepliesCreator reply;
@@ -118,6 +132,7 @@ class	Server {
 					sent.clear();					
 					chan->insert(client);
 					std::vector<Client*> vec = clientInMap(chan->getClientMap());
+					sendAll(vec, splitted[1], client);
 					for(int k = 0; k != vec.size(); k++)
 					{
 						if (vec[k]->getMod())
@@ -157,6 +172,7 @@ class	Server {
 					channel_map.insert(std::make_pair(splitted[1], new_channel));
 				}
 			}
+			//:benjolo2!~benjo2@Azzurra-3476AEA0.business.telecomitalia.it JOIN :#woww
 		}
 		void	nickCmd(Client *client, std::vector<std::string> splitted)
 		{
@@ -201,24 +217,30 @@ class	Server {
 		void	whoCmd(Client *client, std::vector<std::string>splitted)
 		{
 			std::string msg;
-			Channel* chan = findChannel(splitted[1]);
 			RepliesCreator reply;
+			if (splitted[1][splitted[1].length() - 1] == '\n')
+				splitted[1].resize(splitted[1].length() - 2);
+			Channel* chan = findChannel(splitted[1]);
 
-			std::map<int, Client*> cli = chan->getClientMap();
-
-			for(std::map<int, Client*>::iterator it = cli.begin(); it != cli.end(); it++)
+			if(!chan)
+				std::cout << "|" << splitted[1] << "|" << "\nao non funge" << std::endl;
+			else
 			{
-				msg = reply.makeWhoReply(it->second->getNick(), splitted[1]);
+				std::vector<Client*> vec = clientInMap(chan->getClientMap());
+				for(int k = 0; k != vec.size(); k++)
+				{
+					msg = reply.makeWhoReply(vec[k]->getNick(), splitted[1]);
+					send(client->getSd(), msg.c_str(), msg.length(), 0);
+					msg.clear();
+				}
+				msg = reply.makeEndofWhoreply(client->getNick(), splitted[1]);
 				send(client->getSd(), msg.c_str(), msg.length(), 0);
-				msg.clear();
 			}
-			msg = reply.makeEndofWhoreply(client->getNick(), splitted[1]);
-			send(client->getSd(), msg.c_str(), msg.length(), 0);
 		}
 
 		void	modeCmd(Client *client, std::vector<std::string>splitted)
 		{
-			std::string msg = "324 " + client->getNick() + "329";
+			std::string msg = "324 " + client->getNick() + "329" + DEL;
 			send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
 		}
 		/*

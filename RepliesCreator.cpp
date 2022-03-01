@@ -179,6 +179,7 @@ std::string RepliesCreator::makeWhoReply(std::string CNick, std::string mask)
 {
 	std::string text;
 	text = "352 " + CNick + " " + mask + DEL;
+	return(text);
 }
 
 std::string RepliesCreator::makeEndofWhoreply(std::string CNick, std::string mask)
