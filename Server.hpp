@@ -200,8 +200,20 @@ class	Server {
 		}
 		void	whoCmd(Client *client, std::vector<std::string>splitted)
 		{
-			std::string msg = "352 " + client->getNick() + "315";
-			send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
+			std::string msg;
+			Channel* chan = findChannel(splitted[1]);
+			RepliesCreator reply;
+
+			std::map<int, Client*> cli = chan->getClientMap();
+
+			for(std::map<int, Client*>::iterator it = cli.begin(); it != cli.end(); it++)
+			{
+				msg = reply.makeWhoReply(it->second->getNick(), splitted[1]);
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+				msg.clear();
+			}
+			msg = reply.makeEndofWhoreply(client->getNick(), splitted[1]);
+			send(client->getSd(), msg.c_str(), msg.length(), 0);
 		}
 
 		void	modeCmd(Client *client, std::vector<std::string>splitted)

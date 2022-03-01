@@ -174,3 +174,16 @@ std::string RepliesCreator::makeErrorUModeUnknownFlag(std::string CNick)
 	text = "501 " + CNick + " :Unknown mode char" + DEL;
 	return text;
 }
+
+std::string RepliesCreator::makeWhoReply(std::string CNick, std::string mask)
+{
+	std::string text;
+	text = "352 " + CNick + " " + mask + DEL;
+}
+
+std::string RepliesCreator::makeEndofWhoreply(std::string CNick, std::string mask)
+{
+	std::string text;
+	text = "315 " + CNick + " " + mask + ":End of WHO list" + DEL;
+	return(text);
+}
