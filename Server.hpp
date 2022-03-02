@@ -14,6 +14,7 @@
 #include <utility>
 #include <iterator>
 #include <sstream>
+# include <sys/time.h>
 #include "Client.hpp"
 #include "Channel.hpp"
 #include "RepliesCreator.hpp"
@@ -240,7 +241,14 @@ class	Server {
 
 		void	modeCmd(Client *client, std::vector<std::string>splitted)
 		{
-			std::string msg = "324 " + client->getNick() + "329" + DEL;
+			if (splitted[1][splitted[1].length() - 1] == '\n')
+				splitted[1].resize(splitted[1].length() - 2);
+			Channel* chan = findChannel(splitted[1]);
+			std::string msg = "324 " + client->getNick() + " " + splitted[1] + " +" + DEL;
+			send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
+			msg.clear();
+			msg = "329 " + client->getNick() + " " + splitted[1] + " ";
+			msg.append(std::to_string(chan->getTime()) + DEL); 
 			send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
 		}
 		/*
