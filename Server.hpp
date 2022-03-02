@@ -104,7 +104,7 @@ class	Server {
 
 			for(int k = 0; k != vec.size(); k++)
 			{
-				msg.append(":" + vec[k]->getNick() + "!~" + vec[k]->getUser() + " JOIN :" + channel + DEL);
+				msg.append(":" + client->getNick() + "!~" + client->getUser() + " JOIN :" + channel + DEL);
 				send(vec[k]->getSd(), msg.c_str(), msg.length(), 0);
 				msg.clear();
 			}
