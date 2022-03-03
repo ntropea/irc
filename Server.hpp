@@ -222,9 +222,8 @@ class	Server {
 			if (splitted[1][splitted[1].length() - 1] == '\n')
 				splitted[1].resize(splitted[1].length() - 2);
 			Channel* chan = findChannel(splitted[1]);
-
 			if(!chan)
-				std::cout << "|" << splitted[1] << "|" << "\nao non funge" << std::endl;
+				std::cout << "|" << splitted[1] << "|" << "\nao non funge" << std::endl; // mandare errore che non esiste il channel
 			else
 			{
 				std::vector<Client*> vec = clientInMap(chan->getClientMap());
