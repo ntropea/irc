@@ -29,6 +29,9 @@ class	Client;
 
 class	Channel;
 
+std::vector<std::string>	ft_split(std::string str, std::string token);
+int							parse_info(Client *new_client, char *buffer, int valread);
+
 class	Server {
 	private:
 		int										port;
@@ -98,19 +101,18 @@ class	Server {
 			return vec;
 		};
 
-		void	sendAll(std::vector<Client*> vec, std::string channel, Client* client)
+		void	sendAll(std::vector<Client*> vec, std::string msg, Client *client)
 		{
-			std::string msg;
 
 			for(int k = 0; k != vec.size(); k++)
 			{
-				msg.append(":" + client->getNick() + "!~" + client->getUser() + " JOIN :" + channel + DEL);
-				send(vec[k]->getSd(), msg.c_str(), msg.length(), 0);
-				msg.clear();
+				if(client->getSd() != vec[k]->getSd())
+					send(vec[k]->getSd(), msg.c_str(), msg.length(), 0);
 			}
 
 			//:benjolo2!~benjo2@Azzurra-3476AEA0.business.telecomitalia.it JOIN :#woww
 		}
+
 		void	joinCmd(Client *client, std::vector<std::string> splitted)
 		{
 			RepliesCreator reply;
@@ -133,7 +135,9 @@ class	Server {
 					sent.clear();					
 					chan->insert(client);
 					std::vector<Client*> vec = clientInMap(chan->getClientMap());
-					sendAll(vec, splitted[1], client);
+					sent.append(":" + client->getNick() + "!~" + client->getUser() + " JOIN :" + splitted[1] + DEL);
+					sendAll(vec, sent, client);
+					sent.clear();
 					for(int k = 0; k != vec.size(); k++)
 					{
 						if (vec[k]->getMod())
@@ -250,18 +254,21 @@ class	Server {
 			msg.append(std::to_string(chan->getTime()) + DEL); 
 			send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
 		}
-		/*
-		void	privmsgCmd(Client *client, std::vector<std::string> splitted) //da finire
+		void	privmsgCmd(Client *client, std::vector<std::string> splitted, char *buffer) //da finire
 		{
 			std::string					msg;
 			RepliesCreator				reply; //forse dovremmo levare replies creator e scrivere le cose direttamente??
 			std::vector<std::string>	nicks; //se ci sono le virgole in splitted[1], ovvero una lista di utenti, si dovrebbe splittare per ',' e mandare il messaggio a tutti gli utenti della lista
+			std::string					message(buffer); // messaggio da mandare con privmsg
 
 			if (splitted.size() == 1) // se c'è solo PRIVMSG
 			{
-				if (splitted[0][splitted[0].length() - 1] == '\n')
-					splitted[0].resize(splitted[0].length() - 2); //dovremmo provare a farlo direttamente senza if
 				msg.append("411 " + client->getNick() + " :No recipient given (PRIVMSG)\n");
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+			}
+			else if (splitted.size() < 3) // se non c'è il messaggio da mandare
+			{
+				msg.append("412 " + client->getNick() + " :No text to send\n");
 				send(client->getSd(), msg.c_str(), msg.length(), 0);
 			}
 			else //prima devo controllare che il nickname (o tutti quelli in lista? da checkare) esista, poi subito dopo controllo se c'è un messaggio (splitted[2]...)
@@ -269,30 +276,70 @@ class	Server {
 				nicks = ft_split(splitted[1], ","); //(splitto per ',' per ottenere la lista di utenti e canali a cui mandare il messaggio (devo controllare se accetta gli spazi ma mi pare di no))
 				if (splitted[1][splitted[1].length() - 1] == '\n')
 					splitted[1].resize(splitted[0].length() - 2);
-				for (std::map<int, Client*>::iterator it; it = client_map.begin(); it++)
+				std::vector<Client *> vec = clientInMap(client_map);
+				int sent = 0;
+				for (int k = 0; k != nicks.size(); k++)
 				{
-					if (!it->second->getNick().compare(splitted[1]))
+					if (nicks[k][0] == '#') //se il nick è un channel
 					{
-						break ;
+						if (findChannel(nicks[k]) != NULL)
+						{
+							if (splitted[2][0] == ':')
+							{
+								message.erase(0, message.find(':') + 1);
+								msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + message);
+								sendAll(vec, msg, client);
+								//mandare il messaggio al channel
+							}
+							else
+							{
+								msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + splitted[2]);
+								sendAll(vec, msg, client);
+							}
+							sent = 1;
+						}
 					}
-					//se il messaggio comincia con ':', bisogna concatenare tutt gli splitted successivi al 2 (e potrebbe essere un problema perché noi splittiamo per gli spazi, e non so se vengono trimmati)
-					//altrimenti, viene considerato solo splitted[2]
+					else
+					{
+						for (int i = 0; i != vec.size(); i++)
+						{
+							if (!vec[i]->getNick().compare(nicks[k]))
+							{
+								if (splitted[2][0] == ':')
+								{
+									message.erase(0, message.find(':') + 1);
+									msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + message);
+									send(vec[i]->getSd(), msg.c_str(), msg.length(), 0);
+									//:benjolo2!~benjo2@Azzurra-3476AEA0.business.telecomitalia.it PRIVMSG benjo :ciao come va
+								}
+								else
+								{
+									msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + splitted[2]);
+									send(vec[i]->getSd(), msg.c_str(), msg.length(), 0);
+								}
+								//se il messaggio comincia con ':', bisogna concatenare tutt gli splitted successivi al 2 (e potrebbe essere un problema perché noi splittiamo per gli spazi, e non so se vengono trimmati)
+								//altrimenti, viene considerato solo splitted[2]
+								sent = 1;
+								break ;
+							}
+						}
+					}
+					if (sent == 0)
+					{
+						msg.append("401 " + client->getNick() + " " + nicks[k] + " :No such nick/channel\n");
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
+					}
+					else
+						sent = 0;
 				}
 			}
-			
 		}
-		*/
 		void	partCmd();
 		void	listCmd();
-		void	whoCmd();
 		void	topicCmd();
-		void	modeCmd();
 		void	motdCmd();
 		void	noticeCmd();
 		void	kickCmd();
 		void	inviteCmd();
 		~Server();
 };
-
-int							parse_info(Client *new_client, char *buffer, int valread);
-std::vector<std::string>	ft_split(std::string str, std::string token);
