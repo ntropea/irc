@@ -109,76 +109,79 @@ class	Server {
 				if(client->getSd() != vec[k]->getSd())
 					send(vec[k]->getSd(), msg.c_str(), msg.length(), 0);
 			}
-
-			//:benjolo2!~benjo2@Azzurra-3476AEA0.business.telecomitalia.it JOIN :#woww
 		}
 
 		void	joinCmd(Client *client, std::vector<std::string> splitted)
 		{
 			RepliesCreator reply;
 			std::string msg;
+			std::vector<std::string> names;
 			if (splitted[1][splitted[1].length() - 1] == '\n')
 				splitted[1].resize(splitted[1].length() - 2);
-			if (splitted[1][0] != '#')
+			names = ft_split(splitted[1], ",");
+			for (int i = 0; i < names.size(); i++)
 			{
-				msg.append(reply.makeErrorNoSuchChannel(client->getNick(), splitted[1]));
-				send(client->getSd(), msg.c_str(), msg.length(), 0);
-			}
-			else
-			{
-				Channel* chan = findChannel(splitted[1]);
-				if(chan != NULL)
+				if (names[i][0] != '#')
 				{
-					std::string sent;
-					sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + splitted[1] + "\n");
-					send(client->getSd(), sent.c_str(), sent.length(), 0);
-					sent.clear();					
-					chan->insert(client);
-					std::vector<Client*> vec = clientInMap(chan->getClientMap());
-					sent.append(":" + client->getNick() + "!~" + client->getUser() + " JOIN :" + splitted[1] + DEL);
-					sendAll(vec, sent, client);
-					sent.clear();
-					for(int k = 0; k != vec.size(); k++)
-					{
-						if (vec[k]->getMod())
-						{
-							sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + splitted[1] + " :@" + vec[k]->getNick() + "\n");
-							send(client->getSd(), sent.c_str(), sent.length(), 0);
-							sent.clear();
-						}
-					}
-					for(int k = 0; k != vec.size(); k++)
-					{
-						if (!vec[k]->getMod())
-						{
-							sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + splitted[1] + " :" + vec[k]->getNick() + "\n");
-							send(client->getSd(), sent.c_str(), sent.length(), 0);
-							sent.clear();
-						}
-					}
-					sent.append(":127.0.0.1 366 " + client->getNick() + " " + splitted[1] + " :End of /NAMES list.\n331\n");
-					send(client->getSd(), sent.c_str(), sent.length(), 0);
-					std::cout << "benvenuto.\n";
+					msg.append(reply.makeErrorNoSuchChannel(client->getNick(), names[i]));
+					send(client->getSd(), msg.c_str(), msg.length(), 0);
 				}
 				else
 				{
-					Channel *new_channel = new Channel(splitted[1], client);
-					client->setMod(true);
-					std::string sent;
-					sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + splitted[1] + "\n");
-					send(client->getSd(), sent.c_str(), sent.length(), 0);
-					sent.clear();
-					sent.append(":127.0.0.1 353 " + client->getNick() + " = " + splitted[1] + " :@" + client->getNick() + "\n");
-					std::cout << "benvenuto.\n";
-					send(client->getSd(), sent.c_str(), sent.length(), 0);
-					sent.clear();
-					sent.append(":127.0.0.1 366 " + client->getNick() + " " + splitted[1] + " :End of /NAMES list.\n331\n");
-					send(client->getSd(), sent.c_str(), sent.length(), 0);
-					channel_map.insert(std::make_pair(splitted[1], new_channel));
+					Channel* chan = findChannel(names[i]);
+					if(chan != NULL)
+					{
+						std::string sent;
+						sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
+						send(client->getSd(), sent.c_str(), sent.length(), 0);
+						sent.clear();					
+						chan->insert(client);
+						std::vector<Client*> vec = clientInMap(chan->getClientMap());
+						sent.append(":" + client->getNick() + "!~" + client->getUser() + " JOIN :" + names[i] + DEL);
+						sendAll(vec, sent, client);
+						sent.clear();
+						for(int k = 0; k != vec.size(); k++)
+						{
+							if (vec[k]->getMod())
+							{
+								sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :@" + vec[k]->getNick() + "\n");
+								send(client->getSd(), sent.c_str(), sent.length(), 0);
+								sent.clear();
+							}
+						}
+						for(int k = 0; k != vec.size(); k++)
+						{
+							if (!vec[k]->getMod())
+							{
+								sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :" + vec[k]->getNick() + "\n");
+								send(client->getSd(), sent.c_str(), sent.length(), 0);
+								sent.clear();
+							}
+						}
+						sent.append(":127.0.0.1 366 " + client->getNick() + " " + names[i] + " :End of /NAMES list.\n331\n");
+						send(client->getSd(), sent.c_str(), sent.length(), 0);
+						std::cout << "benvenuto.\n";
+					}
+					else
+					{
+						Channel *new_channel = new Channel(names[i], client);
+						client->setMod(true);
+						std::string sent;
+						sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
+						send(client->getSd(), sent.c_str(), sent.length(), 0);
+						sent.clear();
+						sent.append(":127.0.0.1 353 " + client->getNick() + " = " + names[i] + " :@" + client->getNick() + "\n");
+						std::cout << "benvenuto.\n";
+						send(client->getSd(), sent.c_str(), sent.length(), 0);
+						sent.clear();
+						sent.append(":127.0.0.1 366 " + client->getNick() + " " + names[i] + " :End of /NAMES list.\n331\n");
+						send(client->getSd(), sent.c_str(), sent.length(), 0);
+						channel_map.insert(std::make_pair(names[i], new_channel));
+					}
 				}
 			}
-			//:benjolo2!~benjo2@Azzurra-3476AEA0.business.telecomitalia.it JOIN :#woww
 		}
+
 		void	nickCmd(Client *client, std::vector<std::string> splitted)
 		{
 			std::string		msg;
