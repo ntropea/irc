@@ -142,7 +142,7 @@ class	Server {
 						sent.clear();
 						for(int k = 0; k != vec.size(); k++)
 						{
-							if (vec[k]->getMod())
+							if (chan->isMod(vec[k]))
 							{
 								sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :@" + vec[k]->getNick() + "\n");
 								send(client->getSd(), sent.c_str(), sent.length(), 0);
@@ -151,7 +151,7 @@ class	Server {
 						}
 						for(int k = 0; k != vec.size(); k++)
 						{
-							if (!vec[k]->getMod())
+							if (!chan->isMod(vec[k]))
 							{
 								sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :" + vec[k]->getNick() + "\n");
 								send(client->getSd(), sent.c_str(), sent.length(), 0);
@@ -165,7 +165,6 @@ class	Server {
 					else
 					{
 						Channel *new_channel = new Channel(names[i], client);
-						client->setMod(true);
 						std::string sent;
 						sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
 						send(client->getSd(), sent.c_str(), sent.length(), 0);
@@ -247,15 +246,97 @@ class	Server {
 
 		void	modeCmd(Client *client, std::vector<std::string>splitted)
 		{
-			if (splitted[1][splitted[1].length() - 1] == '\n')
-				splitted[1].resize(splitted[1].length() - 2);
-			Channel* chan = findChannel(splitted[1]);
-			std::string msg = "324 " + client->getNick() + " " + splitted[1] + " +" + DEL;
-			send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
-			msg.clear();
-			msg = "329 " + client->getNick() + " " + splitted[1] + " ";
-			msg.append(std::to_string(chan->getTime()) + DEL); 
-			send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
+			std::string msg;
+			Channel*	chan;
+			if (splitted.size() == 1)
+			{
+				if (splitted[0][splitted[0].length() - 1] == '\n')
+					splitted[0].resize(splitted[0].length() - 2);
+				msg.append(": 461 " + client->getNick() + "MODE :Not enough parameters\n");
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+			}
+			else if(splitted.size() == 2)
+			{
+				if (splitted[1][splitted[1].length() - 1] == '\n')
+					splitted[1].resize(splitted[1].length() - 2);
+				chan = findChannel(splitted[1]);
+				if (chan == NULL)
+				{
+					msg.append(": 401 " + client->getNick() + " " + splitted[1] + " :No such nick/channel\n");
+					send(client->getSd(), msg.c_str(), msg.length(), 0);
+				}
+				else
+				{
+					std::string msg = "324 " + client->getNick() + " " + splitted[1] + " +" + DEL;
+					send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
+					msg.clear();
+					msg = "329 " + client->getNick() + " " + splitted[1] + " ";
+					msg.append(std::to_string(chan->getTime()) + DEL); 
+					send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
+				}
+			}
+			else if (splitted.size() > 3)
+			{
+				chan = findChannel(splitted[1]);
+				if (chan == NULL)
+				{
+					msg.append(": 401 " + client->getNick() + " " + splitted[1] + " :No such nick/channel\n");
+					send(client->getSd(), msg.c_str(), msg.length(), 0);
+				}
+				else
+				{
+					if (!chan->isMod(client))
+					{
+						msg.append(": 482 " + client->getNick() + " " + splitted[1] + " :You're not channel operator\n"); //:italia.ircitalia.net 482 benjo|3 #bau :You're not channel operator
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
+						return;
+					}
+					if (!splitted[2].compare("+o"))
+					{
+						if (splitted[3].size() != 0)
+						{
+							if (splitted[3][splitted[3].length() - 1] == '\n')
+								splitted[3].resize(splitted[3].length() - 2);
+							std::vector<Client *> vec = clientInMap(client_map);
+							for(int i = 0; i != vec.size(); i++)
+							{
+								if(!vec[i]->getNick().compare(splitted[3]))
+								{
+									msg.append(":" + client->getNick() + " MODE " + splitted[1] + " +o " + vec[i]->getNick() + DEL);
+									sendAll(vec, msg, client);
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									chan->modInsert(vec[i]);
+									break;
+								}
+							}
+							
+						}
+					}
+					else if (!splitted[2].compare("-o"))
+					{
+						if (splitted[3].size() != 0)
+						{
+							if (splitted[3][splitted[3].length() - 1] == '\n')
+								splitted[3].resize(splitted[3].length() - 2);
+							std::vector<Client *> vec = clientInMap(client_map);
+							for(int i = 0; i != vec.size(); i++)
+							{
+								if(!vec[i]->getNick().compare(splitted[3]))
+								{
+									msg.append(":" + client->getNick() + " MODE " + splitted[1] + " -o " + vec[i]->getNick() + DEL);
+									sendAll(vec, msg, client);
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									chan->modErase(vec[i]);
+									break;
+								}
+							}
+							
+						}
+					}
+				}
+				//:benjo!kvirc@IRCItalia-7BBFBF6E.business.telecomitalia.it MODE #bau +o benjo|2
+			}
+
 		}
 		void	privmsgCmd(Client *client, std::vector<std::string> splitted, char *buffer) //da finire
 		{
