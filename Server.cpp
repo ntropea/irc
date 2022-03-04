@@ -148,6 +148,8 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 		modeCmd(client, splitted);
 	else if (!strncmp(buffer, "PART", 4))
 		partCmd(client, splitted);
+	else if (!strncmp(buffer, "TOPIC", 5))
+		topicCmd(client, splitted, buffer);
 	else
 	{
 		if (splitted[0][splitted[0].length() - 1] == '\n')
@@ -227,7 +229,7 @@ void	Server::run()
             if (FD_ISSET(sd, &read_set))
             {
 				//controllo se qualcuno si é disconnesso e controllo nuovi messaggi
-                if ((valread = read(sd, buffer, 1024)) == 0) //Se ha fatto cntrl c
+                if ((valread = read(sd, buffer, 1024)) == 0) //Se ha fatto cntrl c da client
 					client_dc(sd, i);
                 else
                 {

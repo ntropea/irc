@@ -13,6 +13,8 @@ class	Channel
 		std::vector<Client*>	_voiceClients;
 		std::string				_topic;
 		int						_timeCreate;
+		int						_topicTime;
+		std::string				_topicChanger;
 	public:
 		Channel() {};
 		Channel(std::string name, Client *creator) {
@@ -30,6 +32,10 @@ class	Channel
 		Client*					getClient(int sd) {return _clients.find(sd)->second;};
 		void					insert(Client *client){_clients.insert(std::make_pair(client->getSd(), client));};
 		void					erase(Client *client){_clients.erase(client->getSd());};
+		int						getTopicTime() {return _topicTime;};
+		void					setTopicTime() {struct timeval time; gettimeofday(&time, NULL); _topicTime = time.tv_sec;};
+		std::string				getTopicChanger() {return _topicChanger;};
+		void					setTopicChanger(std::string nick) {_topicChanger = nick;};
 		void					modInsert(Client *client){ _modClients.push_back(client);};
 		void					modErase(Client *client)
 		{
