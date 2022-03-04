@@ -30,6 +30,8 @@ class	Channel
 		void					setTopic(std::string topic){ _topic = topic;};
 		int						size(){return _clients.size();};
 		Client*					getClient(int sd) {return _clients.find(sd)->second;};
+		std::vector<Client*>	getModClients() { return _modClients;}
+		std::map<int, Client*>	getClients() { return _clients;}		
 		void					insert(Client *client){_clients.insert(std::make_pair(client->getSd(), client));};
 		void					erase(Client *client){_clients.erase(client->getSd());};
 		int						getTopicTime() {return _topicTime;};

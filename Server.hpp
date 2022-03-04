@@ -562,7 +562,38 @@ class	Server {
 		}
 		void	motdCmd();
 		void	noticeCmd();
-		void	kickCmd(Client *client, std::vector<std::string> splitted); //:ntropea!~kvirc@Azzurra-3476AEA0.business.telecomitalia.it KICK #woof ntropea|2 :ntropea
+		void	kickCmd(Client *client, std::vector<std::string> splitted)
+		{
+			std::string msg;
+			if (splitted.size() < 3 )
+				send(client->getSd(), "KICK requires more parameters\n", 31, 0);
+			else if(splitted.size() >= 3)
+			{
+				Channel *chan = findChannel(splitted[2]);
+				if (chan != NULL) //se il canale esiste
+				{
+					int i = 0;
+					while (i < chan->getModClients().size())
+					{
+						if (chan->getModClients()[i] == client) //verifico che l'utente sia MOD
+						{
+							std::map<int, Client *>::iterator y;
+							while (y = chan->getClients().begin(); y != chan->getClients().end(); y++)
+							{
+								if (chan->getClients()[y]->getNick() == splitted[3])
+								{
+									//:ffafa!~fafa@Azzurra-3476AEA0.business.telecomitalia.it KICK #cacca frapp :ffafa
+									msg.append(":" + client->getNick() + "!~" + client->getUser() + "KICK " + splitted[2] + " :" + client->getNick());
+									chan->getClients().erase()
+								}
+							}
+						}
+					}
+
+				}
+			}
+		} //:ntropea!~kvirc@Azzurra-3476AEA0.business.telecomitalia.it KICK #woof ntropea|2 :ntropea
 		void	inviteCmd();
 		~Server();
+
 };
