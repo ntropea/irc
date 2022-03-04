@@ -67,20 +67,46 @@ int	parse_pass(Client *new_client, std::string s)
 	return (0);
 }
 
-void	parse_nick(Client *new_client, std::string s)
+void	parse_nick(Client *new_client, std::string s, std::map<int, Client*> map)
 {
 	std::vector<std::string>	raw_parse;
 	raw_parse = ft_split(s, " ");
+	int i = 1;
+	
 	new_client->setNick(raw_parse[1]);
+	/*if(map.size() == 1)
+		return;
+	for(std::map<int, Client*>::iterator it = map.begin(); it != map.end(); it++)
+	{
+		std::cout << "nick " << raw_parse[1];
+		std::cout << "/ map " <<it->second->getNick() << std::endl;
+		if(it->second->getNick().compare(new_client->getNick()) == 0 && new_client->getSd() != it->first)
+		{
+			new_client->setNick(raw_parse[1] + "|" + std::to_string(i));
+			i++;
+		}	
+	}*/
 }
 
-void	parse_user(Client *new_client, std::string s){
+void	parse_user(Client *new_client, std::string s, std::map<int, Client*> map){
     std::vector<std::string>raw_user;
     raw_user = ft_split(s, " ");
-    new_client->setUser(raw_user[1]);
+    int i = 1;
+
+	new_client->setUser(raw_user[1]);
+	/*if(map.size() == 1)
+		return;
+	for(std::map<int, Client*>::iterator it = map.begin(); it != map.end(); it++)
+	{
+		if(it->second->getUser().compare(new_client->getUser()) == 0)
+		{
+			new_client->setUser(raw_user[1] + "|" + std::to_string(i));
+			i++;
+		}
+	}*/
 }
 
-int	parse_info(Client *new_client, char *buffer, int valread)
+int	parse_info(Client *new_client, char *buffer, int valread, std::map<int, Client*> map)
 {
 	RepliesCreator				reply;
 	std::vector<std::string>	raw_parse;
@@ -90,7 +116,7 @@ int	parse_info(Client *new_client, char *buffer, int valread)
 	std::cout << raw_string << std::endl;
 	raw_parse = ft_split(raw_string, "\r\n");
 	if (!raw_parse[0].compare(0, 5, "PASS :")){
-		parse_nick(new_client, raw_parse[0]);
+		parse_nick(new_client, raw_parse[0], map);
 		sent.append(reply.makePasswdMisMatch(new_client->getNick()));
 		send(new_client->getSd(), sent.c_str(), sent.length(), 0);
 		return (-1);
@@ -100,14 +126,14 @@ int	parse_info(Client *new_client, char *buffer, int valread)
 		if (!parse_pass(new_client, raw_parse[0]))
 		{
 			if (raw_parse.size() > 1)
-				parse_nick(new_client, raw_parse[1]);
+				parse_nick(new_client, raw_parse[1], map);
 			sent.append(reply.makePasswdMisMatch(new_client->getNick()));
 			send(new_client->getSd(), sent.c_str(), sent.length(), 0);
 			return (-1);
 		}
 		if (raw_parse[1].length()){
-			parse_nick(new_client, raw_parse[1]);	
-			parse_user(new_client, raw_parse[2]);
+			parse_nick(new_client, raw_parse[1], map);	
+			parse_user(new_client, raw_parse[2], map);
 		}
 	}
 	new_client->setLogged(true);
@@ -229,7 +255,7 @@ void	Server::run()
                     buffer[valread] = '\0';
                     if (client_map.find(sd)->second->getLog() == false) //se é la prima connessione e non ha loggato
 					{
-						if (parse_info(client_map.find(sd)->second, buffer, valread) == -1)
+						if (parse_info(client_map.find(sd)->second, buffer, valread, client_map) == -1)
 							client_dc(sd, i);
 					}
 					else
