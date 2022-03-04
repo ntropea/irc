@@ -18,6 +18,9 @@
 #include "Client.hpp"
 #include "Channel.hpp"
 #include "RepliesCreator.hpp"
+#define IP "127.0.0.1"
+#define RPL_NAMREPLY			"353"
+#define RPL_ENDOFNAME			"366"
 
 #define MAX_CLIENTS 30
 
@@ -564,32 +567,53 @@ class	Server {
 			std::string msg;
 			if (splitted.size() < 3 )
 				send(client->getSd(), "KICK requires more parameters\n", 31, 0);
-			else if(splitted.size() >= 3)
+			else
 			{
 				Channel *chan = findChannel(splitted[2]);
 				if (chan != NULL) //se il canale esiste
 				{
+					std::cout << "ho trovato il canale\n";
 					int i = 0;
 					while (i < chan->getModClients().size())
 					{
 						if (chan->getModClients()[i] == client) //verifico che l'utente sia MOD
 						{
 							std::map<int, Client *>::iterator y;
-							while (y = chan->getClients().begin(); y != chan->getClients().end(); y++)
+							for (y = chan->getClientMap().begin(); y != chan->getClientMap().end(); y++)
 							{
-								if (chan->getClients()[y]->getNick() == splitted[3])
+								if (y->second->getNick() == splitted[3]) //se esiste il client da kickare
 								{
 									//:ffafa!~fafa@Azzurra-3476AEA0.business.telecomitalia.it KICK #cacca frapp :ffafa
 									msg.append(":" + client->getNick() + "!~" + client->getUser() + "KICK " + splitted[2] + " :" + client->getNick());
-									chan->getClients().erase()
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									sendAll(clientInMap(chan->getClientMap()), msg, client);
+									chan->getClientMap().erase(y->first);
+									break ;
 								}
 							}
+							if (y == chan->getClientMap().end()) //se non c'é il client
+							{
+								msg.append(splitted[3] + ": No such nick/channel" + DEL);
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
+								break ;
+							}
 						}
+						else if (i == chan->getModClients().size()) //se non é OP 
+						{
+							msg.append(splitted[2] + ": You're not channel operator" + DEL);
+							send(client->getSd(), msg.c_str(), msg.length(), 0);
+							break ;
+						}
+						i++;	
 					}
-
+				}
+				else
+				{
+					msg.append(splitted[3] + ": No such nick/channel" + DEL);
+					send(client->getSd(), msg.c_str(), msg.length(), 0);
 				}
 			}
-		} //:ntropea!~kvirc@Azzurra-3476AEA0.business.telecomitalia.it KICK #woof ntropea|2 :ntropea
+		}
 		void	inviteCmd();
 		~Server();
 

@@ -171,6 +171,8 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 		partCmd(client, splitted);
 	else if (!strncmp(buffer, "TOPIC", 5))
 		topicCmd(client, splitted, buffer);
+	else if (!strncmp(buffer, "KICK", 4))
+		kickCmd(client, splitted);
 	else
 	{
 		if (splitted[0][splitted[0].length() - 1] == '\n')
