@@ -229,7 +229,10 @@ class	Server {
 				splitted[1].resize(splitted[1].length() - 2);
 			Channel* chan = findChannel(splitted[1]);
 			if(!chan)
-				std::cout << "|" << splitted[1] << "|" << "\nao non funge" << std::endl; // mandare errore che non esiste il channel
+			{
+				msg.append(reply.makeErrorNoSuchChannel(client->getNick(), splitted[1]));
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+			}
 			else
 			{
 				std::vector<Client*> vec = clientInMap(chan->getClientMap());
@@ -291,7 +294,7 @@ class	Server {
 						send(client->getSd(), msg.c_str(), msg.length(), 0);
 						return;
 					}
-					if (!splitted[2].compare("+o"))
+					if (!splitted[2].compare("+o")) //op
 					{
 						if (splitted[3].size() != 0)
 						{
@@ -312,7 +315,7 @@ class	Server {
 							
 						}
 					}
-					else if (!splitted[2].compare("-o"))
+					else if (!splitted[2].compare("-o")) //deop
 					{
 						if (splitted[3].size() != 0)
 						{
@@ -330,20 +333,98 @@ class	Server {
 									break;
 								}
 							}
-							
+						}
+					}
+					else if (!splitted[2].compare("+h")) //halfop
+					{
+						if (splitted[3].size() != 0)
+						{
+							if (splitted[3][splitted[3].length() - 1] == '\n')
+								splitted[3].resize(splitted[3].length() - 2);
+							std::vector<Client *> vec = clientInMap(client_map);
+							for(int i = 0; i != vec.size(); i++)
+							{
+								if(!vec[i]->getNick().compare(splitted[3]))
+								{
+									msg.append(":" + client->getNick() + " MODE " + splitted[1] + " +h " + vec[i]->getNick() + DEL);
+									sendAll(vec, msg, client);
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									chan->halfModInsert(vec[i]);
+									break;
+								}
+							}
+						}
+					}
+					else if (!splitted[2].compare("-h")) //dehalfop
+					{
+						if (splitted[3].size() != 0)
+						{
+							if (splitted[3][splitted[3].length() - 1] == '\n')
+								splitted[3].resize(splitted[3].length() - 2);
+							std::vector<Client *> vec = clientInMap(client_map);
+							for(int i = 0; i != vec.size(); i++)
+							{
+								if(!vec[i]->getNick().compare(splitted[3]))
+								{
+									msg.append(":" + client->getNick() + " MODE " + splitted[1] + " -h " + vec[i]->getNick() + DEL);
+									sendAll(vec, msg, client);
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									chan->halfModErase(vec[i]);
+									break;
+								}
+							}
+						}
+					}
+					else if (!splitted[2].compare("+v")) //voice
+					{
+						if (splitted[3].size() != 0)
+						{
+							if (splitted[3][splitted[3].length() - 1] == '\n')
+								splitted[3].resize(splitted[3].length() - 2);
+							std::vector<Client *> vec = clientInMap(client_map);
+							for(int i = 0; i != vec.size(); i++)
+							{
+								if(!vec[i]->getNick().compare(splitted[3]))
+								{
+									msg.append(":" + client->getNick() + " MODE " + splitted[1] + " +v " + vec[i]->getNick() + DEL);
+									sendAll(vec, msg, client);
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									chan->voiceInsert(vec[i]);
+									break;
+								}
+							}
+						}
+					}
+					else if (!splitted[2].compare("-v")) //devoice
+					{
+						if (splitted[3].size() != 0)
+						{
+							if (splitted[3][splitted[3].length() - 1] == '\n')
+								splitted[3].resize(splitted[3].length() - 2);
+							std::vector<Client *> vec = clientInMap(client_map);
+							for(int i = 0; i != vec.size(); i++)
+							{
+								if(!vec[i]->getNick().compare(splitted[3]))
+								{
+									msg.append(":" + client->getNick() + " MODE " + splitted[1] + " -v " + vec[i]->getNick() + DEL);
+									sendAll(vec, msg, client);
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									chan->voiceErase(vec[i]);
+									break;
+								}
+							}
 						}
 					}
 				}
-				//:benjo!kvirc@IRCItalia-7BBFBF6E.business.telecomitalia.it MODE #bau +o benjo|2
 			}
-
 		}
-		void	privmsgCmd(Client *client, std::vector<std::string> splitted, char *buffer) //da finire
+
+		void	privmsgCmd(Client *client, std::vector<std::string> splitted, char *buffer)
 		{
 			std::string					msg;
-			RepliesCreator				reply; //forse dovremmo levare replies creator e scrivere le cose direttamente??
-			std::vector<std::string>	nicks; //se ci sono le virgole in splitted[1], ovvero una lista di utenti, si dovrebbe splittare per ',' e mandare il messaggio a tutti gli utenti della lista
-			std::string					message(buffer); // messaggio da mandare con privmsg
+			RepliesCreator				reply;
+			std::vector<std::string>	nicks;
+			std::string					message(buffer);
 
 			if (splitted.size() == 1) // se c'è solo PRIVMSG
 			{
@@ -357,7 +438,7 @@ class	Server {
 			}
 			else //prima devo controllare che il nickname (o tutti quelli in lista? da checkare) esista, poi subito dopo controllo se c'è un messaggio (splitted[2]...)
 			{
-				nicks = ft_split(splitted[1], ","); //(splitto per ',' per ottenere la lista di utenti e canali a cui mandare il messaggio (devo controllare se accetta gli spazi ma mi pare di no))
+				nicks = ft_split(splitted[1], ","); //(splitto per ',' per ottenere la lista di utenti e canali a cui mandare il messaggio)
 				if (splitted[1][splitted[1].length() - 1] == '\n')
 					splitted[1].resize(splitted[0].length() - 2);
 				std::vector<Client *> vec = clientInMap(client_map);
@@ -373,7 +454,6 @@ class	Server {
 								message.erase(0, message.find(':') + 1);
 								msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + message);
 								sendAll(vec, msg, client);
-								//mandare il messaggio al channel
 							}
 							else
 							{
@@ -394,7 +474,6 @@ class	Server {
 									message.erase(0, message.find(':') + 1);
 									msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + message);
 									send(vec[i]->getSd(), msg.c_str(), msg.length(), 0);
-									//:benjolo2!~benjo2@Azzurra-3476AEA0.business.telecomitalia.it PRIVMSG benjo :ciao come va
 								}
 								else
 								{
@@ -418,7 +497,42 @@ class	Server {
 				}
 			}
 		}
-		void	partCmd();
+		void	partCmd(Client *client, std::vector<std::string> splitted)
+		{
+			std::string	msg;
+			Channel		*chan;
+			if (splitted.size() == 1)
+			{
+				msg.append(": 461 " + client->getNick() + " PART :Not enough parameters" + DEL);
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+			}
+			else if (splitted.size() == 2)
+			{
+				if (splitted[1][splitted[1].length() - 1] == '\n')
+					splitted[1].resize(splitted[0].length() - 2);
+				chan = findChannel(splitted[1]);
+				if (chan == NULL)
+				{
+					msg.append(": 403 " + client->getNick() + " " + splitted[1] + " :No such channel" + DEL);
+					send(client->getSd(), msg.c_str(), msg.length(), 0);
+				}
+				else
+				{
+					if (!chan->checkClient(client))
+					{
+						msg.append(" :442 " + client->getNick() + " " + chan->getName() + " :You're not on that channel" + DEL);
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
+					}
+					else
+					{
+						msg.append(":" + client->getNick() + "!~" + client->getUser() + " PART " + chan->getName() + DEL);
+						sendAll(clientInMap(chan->getClientMap()), msg, client);
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
+						chan->erase(client);
+					}
+				}
+			}
+		}
 		void	listCmd();
 		void	topicCmd();
 		void	motdCmd();

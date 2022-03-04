@@ -40,14 +40,19 @@ Server::Server(int port, std::string pass)
 std::vector<std::string> ft_split(std::string str, std::string token)
 {
 	std::vector<std::string>result;
-	while (str.size()){
+	while (str.size())
+	{
 		unsigned long index = str.find(token);
-		if (index!=std::string::npos){
-			result.push_back(str.substr(0, index));
+		if (index!=std::string::npos)
+		{
+			if (index != 0)
+				result.push_back(str.substr(0, index));
 			str = str.substr(index + token.size());
-			if(str.size()==0)
-				result.push_back(str);}
-		else{
+			//if(str.size() == 0)
+				//result.push_back(str);
+		}
+		else
+		{
 			result.push_back(str);
 			str = "";
 		}
@@ -123,6 +128,8 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 	RepliesCreator reply;
 	std::vector<std::string> splitted;
 	std::string buf(buffer, (size_t)valread);
+	buf.pop_back();
+	buf.pop_back();
 	splitted = ft_split(buf, " ");
 	if (!strncmp(buffer, "QUIT", 4))
 		client_dc(sd, i); 
@@ -139,6 +146,8 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 		whoCmd(client, splitted);
 	else if (!strncmp(buffer, "MODE", 4))
 		modeCmd(client, splitted);
+	else if (!strncmp(buffer, "PART", 4))
+		partCmd(client, splitted);
 	else
 	{
 		if (splitted[0][splitted[0].length() - 1] == '\n')
