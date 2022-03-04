@@ -84,7 +84,7 @@ class	Server {
 		}
 
 		/***************************** COMMANDS *****************************/
-		git avoid	userCmd();
+		void	userCmd();
 		void	pingCmd(Client *client, std::vector<std::string> splitted)
 		{
 			std::string msg;
