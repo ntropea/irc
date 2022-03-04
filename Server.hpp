@@ -18,9 +18,6 @@
 #include "Client.hpp"
 #include "Channel.hpp"
 #include "RepliesCreator.hpp"
-#define IP "127.0.0.1"
-#define RPL_NAMREPLY			"353"
-#define RPL_ENDOFNAME			"366"
 
 #define MAX_CLIENTS 30
 
