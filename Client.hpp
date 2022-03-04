@@ -11,7 +11,7 @@ class Client	{
 	public:
 		Server *server;
 		Client() {_logged = false;};
-		~Client();
+		~Client() {};
 		std::string getNick(){return(this->_nickname);};
 		std::string getUser(){return(this->_username);};
 		bool		getLog(){return(this->_logged);};

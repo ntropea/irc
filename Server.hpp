@@ -21,7 +21,6 @@
 #define IP "127.0.0.1"
 #define RPL_NAMREPLY			"353"
 #define RPL_ENDOFNAME			"366"
-//#include "Channel.hpp"
 
 #define MAX_CLIENTS 30
 
@@ -58,22 +57,6 @@ class	Server {
 		void 		run();
 		void		parse_commands(Client *client, char *buffer, int valread, int i);
 		std::map<std::string, Channel*>	getChannelMap() { return channel_map; };
-
-		/***************************** COMMANDS *****************************/
-		void	userCmd();
-		void	pingCmd(Client *client, std::vector<std::string> splitted)
-		{
-			std::string msg;
-			RepliesCreator reply;
-
-			if (splitted.size() < 2)
-				msg.append(reply.makeErrorNoOrigin(client->getNick()));
-			else if (splitted.size() == 2)
-				msg.append("PONG " + splitted[1] + "\n");
-			else
-				msg.append("PONG " + splitted[2] + " " + splitted[1] + "\n");
-			send(client->getSd(), msg.c_str(), msg.length(), 0);
-		};
 		Channel* findChannel(std::string nameChannel)
 		{
 			for(std::map<std::string, Channel*>::iterator i = channel_map.begin(); i != channel_map.end(); i++)
@@ -90,7 +73,6 @@ class	Server {
 				vec.push_back(i->second);
 			return vec;
 		};
-
 		void	sendAll(std::vector<Client*> vec, std::string msg, Client *client)
 		{
 
@@ -101,6 +83,21 @@ class	Server {
 			}
 		}
 
+		/***************************** COMMANDS *****************************/
+		git avoid	userCmd();
+		void	pingCmd(Client *client, std::vector<std::string> splitted)
+		{
+			std::string msg;
+			RepliesCreator reply;
+
+			if (splitted.size() < 2)
+				msg.append(reply.makeErrorNoOrigin(client->getNick()));
+			else if (splitted.size() == 2)
+				msg.append("PONG " + splitted[1] + "\n");
+			else
+				msg.append("PONG " + splitted[2] + " " + splitted[1] + "\n");
+			send(client->getSd(), msg.c_str(), msg.length(), 0);
+		};
 		void	joinCmd(Client *client, std::vector<std::string> splitted)
 		{
 			RepliesCreator reply;
@@ -119,49 +116,54 @@ class	Server {
 					Channel* chan = findChannel(names[i]);
 					if(chan != NULL)
 					{
-						std::string sent;
-						sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
-						send(client->getSd(), sent.c_str(), sent.length(), 0);
-						sent.clear();					
+						msg.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
+						msg.clear();				
 						chan->insert(client);
+						if (!chan->getTopic().empty())
+						{
+							msg.append(": 332 " + client->getNick() + " " + chan->getName() + " :" + chan->getTopic() + DEL);
+							send(client->getSd(), msg.c_str(), msg.length(), 0);
+							msg.clear();
+							msg.append(": 333 " + client->getNick() + " " + chan->getName() + " " + chan->getTopicChanger() + " " + std::to_string(chan->getTopicTime()) + DEL);
+							send(client->getSd(), msg.c_str(), msg.length(), 0);
+						}
 						std::vector<Client*> vec = clientInMap(chan->getClientMap());
-						sent.append(":" + client->getNick() + "!~" + client->getUser() + " JOIN :" + names[i] + DEL);
-						sendAll(vec, sent, client);
-						sent.clear();
+						msg.append(":" + client->getNick() + "!~" + client->getUser() + " JOIN :" + names[i] + DEL);
+						sendAll(vec, msg, client);
+						msg.clear();
 						for(int k = 0; k != vec.size(); k++)
 						{
 							if (chan->isMod(vec[k]))
 							{
-								sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :@" + vec[k]->getNick() + "\n");
-								send(client->getSd(), sent.c_str(), sent.length(), 0);
-								sent.clear();
+								msg.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :@" + vec[k]->getNick() + "\n");
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
+								msg.clear();
 							}
 						}
 						for(int k = 0; k != vec.size(); k++)
 						{
 							if (!chan->isMod(vec[k]))
 							{
-								sent.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :" + vec[k]->getNick() + "\n");
-								send(client->getSd(), sent.c_str(), sent.length(), 0);
-								sent.clear();
+								msg.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :" + vec[k]->getNick() + "\n");
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
+								msg.clear();
 							}
 						}
-						sent.append(":127.0.0.1 366 " + client->getNick() + " " + names[i] + " :End of /NAMES list.\n331\n");
-						send(client->getSd(), sent.c_str(), sent.length(), 0);
+						msg.append(":127.0.0.1 366 " + client->getNick() + " " + names[i] + " :End of /NAMES list.\n331\n");
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
 					}
 					else
 					{
 						Channel *new_channel = new Channel(names[i], client);
-						std::string sent;
-						sent.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
-						send(client->getSd(), sent.c_str(), sent.length(), 0);
-						sent.clear();
-						sent.append(":127.0.0.1 353 " + client->getNick() + " = " + names[i] + " :@" + client->getNick() + "\n");
-						std::cout << "benvenuto.\n";
-						send(client->getSd(), sent.c_str(), sent.length(), 0);
-						sent.clear();
-						sent.append(":127.0.0.1 366 " + client->getNick() + " " + names[i] + " :End of /NAMES list.\n331\n");
-						send(client->getSd(), sent.c_str(), sent.length(), 0);
+						msg.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
+						msg.clear();
+						msg.append(":127.0.0.1 353 " + client->getNick() + " = " + names[i] + " :@" + client->getNick() + "\n");
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
+						msg.clear();
+						msg.append(":127.0.0.1 366 " + client->getNick() + " " + names[i] + " :End of /NAMES list.\n331\n");
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
 						channel_map.insert(std::make_pair(names[i], new_channel));
 					}
 				}

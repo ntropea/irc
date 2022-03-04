@@ -7,22 +7,20 @@ Server::Server(int port, std::string pass)
 	memset( &timeout, 0, sizeof(timeout) );
     timeout.tv_sec = 3 * 60;
 	opt = 1;
-	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == 0) //cambiato -1 con 0
+	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == 0)
 	{
 		perror("Error");
 		exit(EXIT_FAILURE);
 	}
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0 ) // la condizione era sbagliata
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0 )
 	{
 		perror("setsockopt failed");
 		exit(EXIT_FAILURE);
 	}
 	bzero(&addr, sizeof(addr));
-
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons(port);
-
 	for (int i = 0; i < MAX_CLIENTS; i++)
 		clients_sd[i] = 0;
 	if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0)
@@ -48,8 +46,6 @@ std::vector<std::string> ft_split(std::string str, std::string token)
 			if (index != 0)
 				result.push_back(str.substr(0, index));
 			str = str.substr(index + token.size());
-			//if(str.size() == 0)
-				//result.push_back(str);
 		}
 		else
 		{
@@ -133,9 +129,8 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 	splitted = ft_split(buf, " ");
 	if (!strncmp(buffer, "QUIT", 4))
 		client_dc(sd, i); 
-	else if (!strncmp(buffer, "JOIN", 4)){
-		std::cout << buf << std::endl;
-		joinCmd(client, splitted);}
+	else if (!strncmp(buffer, "JOIN", 4))
+		joinCmd(client, splitted);
 	else if (!strncmp(buffer, "PING", 4))
 		pingCmd(client, splitted);
 	else if (!strncmp(buffer, "NICK", 4))
@@ -199,7 +194,7 @@ void	Server::run()
 			if ((new_sd = accept(sock, (struct sockaddr *)&addr, (socklen_t *)&addrlen)) < 0)
 			{
 				perror("accept");
-				//exit(1);
+				exit(1);
 			}
 			printf("New connection , socket fd is %d , ip is : %s , port : %d \n" , new_sd , inet_ntoa(addr.sin_addr) , ntohs(addr.sin_port));
 			if (setsockopt(new_sd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
@@ -222,19 +217,16 @@ void	Server::run()
 				}
 			}
 		}
-		// se non é una nuova connessione é qualche altra azione
-		for (int i = 0; i < MAX_CLIENTS; i++)
+		for (int i = 0; i < MAX_CLIENTS; i++)// se non é una nuova connessione é qualche altra azione
         {
             sd = clients_sd[i];
-            if (FD_ISSET(sd, &read_set))
+            if (FD_ISSET(sd, &read_set)) //controllo se qualcuno si é disconnesso e controllo nuovi messaggi
             {
-				//controllo se qualcuno si é disconnesso e controllo nuovi messaggi
                 if ((valread = read(sd, buffer, 1024)) == 0) //Se ha fatto cntrl c da client
 					client_dc(sd, i);
                 else
                 {
                     buffer[valread] = '\0';
-					//se non é piú loggato
                     if (client_map.find(sd)->second->getLog() == false) //se é la prima connessione e non ha loggato
 					{
 						if (parse_info(client_map.find(sd)->second, buffer, valread) == -1)
