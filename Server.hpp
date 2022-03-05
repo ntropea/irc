@@ -566,50 +566,54 @@ class	Server {
 		{
 			std::string msg;
 			if (splitted.size() < 3 )
-				send(client->getSd(), "KICK requires more parameters\n", 31, 0);
+			{
+				msg.append(": 461 " + client->getNick() + " KICK :Not enough parameters" + DEL);
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+			}
 			else
 			{
-				Channel *chan = findChannel(splitted[2]);
+				Channel *chan = findChannel(splitted[1]);
+				//std::cout << "il canale si chiama |" << chan->getName() << "|\n"; 
 				if (chan != NULL) //se il canale esiste
 				{
-					std::cout << "ho trovato il canale\n";
-					int i = 0;
-					while (i < chan->getModClients().size())
+					if (chan->isMod(client)) //verifico che l'utente sia MOD
 					{
-						if (chan->getModClients()[i] == client) //verifico che l'utente sia MOD
+						std::cout << "sono il mod\n";
+						std::vector<Client *> chanClient = clientInMap(chan->getClientMap());
+						for (int y = 0; y != chanClient.size(); y++)
 						{
-							std::map<int, Client *>::iterator y;
-							for (y = chan->getClientMap().begin(); y != chan->getClientMap().end(); y++)
+							//std::cout << "chan->getclientmap punta al tizio " << y->second->getNick() << std::endl;
+							if(!chanClient[y]->getNick().compare(splitted[2])) //se esiste il client da kickare
 							{
-								if (y->second->getNick() == splitted[3]) //se esiste il client da kickare
-								{
-									//:ffafa!~fafa@Azzurra-3476AEA0.business.telecomitalia.it KICK #cacca frapp :ffafa
-									msg.append(":" + client->getNick() + "!~" + client->getUser() + "KICK " + splitted[2] + " :" + client->getNick());
-									send(client->getSd(), msg.c_str(), msg.length(), 0);
-									sendAll(clientInMap(chan->getClientMap()), msg, client);
-									chan->getClientMap().erase(y->first);
-									break ;
-								}
+								std::cout << "ho trovato il client" << std::endl;
+								//:ffafa!~fafa@Azzurra-3476AEA0.business.telecomitalia.it KICK #cacca frapp :ffafa
+								msg.append(":" + client->getNick() + "!~" + client->getUser() + "KICK " + splitted[1] + " :" + client->getNick());
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
+								sendAll(clientInMap(chan->getClientMap()), msg, client);
+								//chan->getClientMap().erase();
+								break ;
 							}
-							if (y == chan->getClientMap().end()) //se non c'é il client
+							else if (y == chanClient.size()) //se non c'é il client
 							{
-								msg.append(splitted[3] + ": No such nick/channel" + DEL);
+								std::cout << "non l'ho trovato" << std::endl;
+								msg.append(": 401 " + client->getNick() + " " + splitted[2] + " :No such nick/channel" + DEL);
 								send(client->getSd(), msg.c_str(), msg.length(), 0);
 								break ;
 							}
+							std::cout << "sto looppando\n";
 						}
-						else if (i == chan->getModClients().size()) //se non é OP 
-						{
-							msg.append(splitted[2] + ": You're not channel operator" + DEL);
-							send(client->getSd(), msg.c_str(), msg.length(), 0);
-							break ;
-						}
-						i++;	
 					}
+					else //se non é OP
+					{
+						//:allnight.azzurra.org 482 frappinz #cacca :You're not channel operator
+						msg.append(": 482 " + client->getNick() + " " + splitted[1] + " :You're not channel operator" + DEL);
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
+					}	
 				}
-				else
+				else //se il canale non esiste
 				{
-					msg.append(splitted[3] + ": No such nick/channel" + DEL);
+					 //:allnight.azzurra.org 403 frappinz #cac :No such channel
+					msg.append(": 403 " + client->getNick() + " " + splitted[1] + " :No such nick/channel" + DEL);
 					send(client->getSd(), msg.c_str(), msg.length(), 0);
 				}
 			}
