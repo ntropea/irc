@@ -74,18 +74,21 @@ void	parse_nick(Client *new_client, std::string s, std::map<int, Client*> map)
 	int i = 1;
 	
 	new_client->setNick(raw_parse[1]);
-	/*if(map.size() == 1)
+	if(map.size() == 1)
 		return;
+	if(raw_parse[1][raw_parse[1].size() - 2] == '|')
+	{
+		i = (int)raw_parse[1][raw_parse[1].size() - 1] - 47;
+		raw_parse[1].resize(raw_parse[1].size() - 2);
+	}
 	for(std::map<int, Client*>::iterator it = map.begin(); it != map.end(); it++)
 	{
-		std::cout << "nick " << raw_parse[1];
-		std::cout << "/ map " <<it->second->getNick() << std::endl;
 		if(it->second->getNick().compare(new_client->getNick()) == 0 && new_client->getSd() != it->first)
 		{
 			new_client->setNick(raw_parse[1] + "|" + std::to_string(i));
 			i++;
-		}	
-	}*/
+		}
+	}
 }
 
 void	parse_user(Client *new_client, std::string s, std::map<int, Client*> map){
@@ -94,16 +97,21 @@ void	parse_user(Client *new_client, std::string s, std::map<int, Client*> map){
     int i = 1;
 
 	new_client->setUser(raw_user[1]);
-	/*if(map.size() == 1)
+	if(map.size() == 1)
 		return;
+	if(raw_user[1][raw_user[1].size() - 2] == '|')
+	{
+		i = (int)raw_user[1][raw_user[1].size() - 1] - 47;
+		raw_user[1].resize(raw_user[1].size() - 2);
+	}
 	for(std::map<int, Client*>::iterator it = map.begin(); it != map.end(); it++)
 	{
-		if(it->second->getUser().compare(new_client->getUser()) == 0)
+		if(it->second->getUser().compare(new_client->getUser()) == 0 && new_client->getSd() != it->first)
 		{
 			new_client->setUser(raw_user[1] + "|" + std::to_string(i));
 			i++;
 		}
-	}*/
+	}
 }
 
 int	parse_info(Client *new_client, char *buffer, int valread, std::map<int, Client*> map)
@@ -175,11 +183,11 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 		kickCmd(client, splitted);
 	else
 	{
-		if (splitted[0][splitted[0].length() - 1] == '\n')
-			splitted[0].pop_back();
 		sent.append(reply.makeErrorUnknownCommand(splitted[0]));
 		send(client->getSd(), sent.c_str(), sent.length(), 0);
 	}
+	checkChannels();
+
 }
 
 void	Server::client_dc(int sd, int i)

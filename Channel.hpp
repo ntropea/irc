@@ -33,7 +33,12 @@ class	Channel
 		std::map<int, Client*>	getClientMap() {return _clients;};
 		std::vector<Client*>	getModClients() { return _modClients;}		
 		void					insert(Client *client){_clients.insert(std::make_pair(client->getSd(), client));};
-		void					erase(Client *client){_clients.erase(client->getSd());};
+		void					erase(Client *client){
+			_clients.erase(client->getSd());
+			modErase(client);
+			halfModErase(client);
+			voiceErase(client);
+		};
 		int						getTopicTime() {return _topicTime;};
 		void					setTopicTime() {struct timeval time; gettimeofday(&time, NULL); _topicTime = time.tv_sec;};
 		std::string				getTopicChanger() {return _topicChanger;};

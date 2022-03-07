@@ -58,7 +58,7 @@ class	Server {
 		void		parse_commands(Client *client, char *buffer, int valread, int i);
 		std::map<std::string, Channel*>	getChannelMap() { return channel_map; };
 		Channel* findChannel(std::string nameChannel)
-		{
+		{ 
 			for(std::map<std::string, Channel*>::iterator i = channel_map.begin(); i != channel_map.end(); i++)
 			{
 				if (!i->first.compare(nameChannel))
@@ -66,6 +66,17 @@ class	Server {
 			}
 			return(NULL);
 		};
+		void	checkChannels()
+		{
+			std::map<std::string, Channel *>::iterator i = channel_map.begin();
+			while (i != channel_map.end())
+			{
+				if (i->second->getClientMap().empty())
+					channel_map.erase(i++);
+				else
+					++i;
+			}
+		}
 		std::vector<Client*> clientInMap(std::map<int, Client*> map)
 		{
 			std::vector<Client*> vec;
@@ -573,27 +584,33 @@ class	Server {
 			}
 			else
 			{
+				std::vector<std::string> nicks = ft_split(splitted[2], ",");
 				Channel *chan = findChannel(splitted[1]);
 				if (chan != NULL) //se il canale esiste
 				{
 					if (chan->isMod(client)) //verifico che l'utente sia MOD
 					{
 						std::vector<Client *> chanClient = clientInMap(chan->getClientMap());
-						for (int y = 0; y != chanClient.size(); y++)
+						for(int i = 0; i < nicks.size(); i++)
 						{
-							if(!chanClient[y]->getNick().compare(splitted[2])) //se esiste il client da kickare
+							for (int y = 0; y != chanClient.size(); y++)
 							{
-								msg.append(":" + client->getNick() + "!~" + client->getUser() + " KICK " + splitted[1] + " :" + chanClient[y]->getNick() + DEL);
-								send(client->getSd(), msg.c_str(), msg.length(), 0);
-								sendAll(clientInMap(chan->getClientMap()), msg, client);
-								chan->erase(chanClient[y]);
-								break ;
-							}
-							else if (y == chanClient.size() - 1) //se non c'é il client
-							{
-								msg.append(": 401 " + client->getNick() + " " + splitted[2] + " :No such nick/channel" + DEL);
-								send(client->getSd(), msg.c_str(), msg.length(), 0);
-								break ;
+								if(!chanClient[y]->getNick().compare(nicks[i])) //se esiste il client da kickare
+								{
+									msg.append(":" + client->getNick() + "!~" + client->getUser() + " KICK " + splitted[1] + " " + chanClient[y]->getNick() + " :" + client->getNick() + DEL);
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									sendAll(chanClient, msg, client);
+									msg.clear();
+									chan->erase(chanClient[y]);
+									chanClient = clientInMap(chan->getClientMap());
+									break ;
+								}
+								else if (y == chanClient.size() - 1) //se non c'é il client
+								{
+									msg.append(": 401 " + client->getNick() + " " + nicks[i] + " :No such nick/channel" + DEL);
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									break ;
+								}
 							}
 						}
 					}
