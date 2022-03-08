@@ -69,44 +69,47 @@ int	parse_pass(Client *new_client, std::string s)
 
 void	parse_nick(Client *new_client, std::string s, std::map<int, Client*> map)
 {
-	std::vector<std::string>	raw_parse;
-	raw_parse = ft_split(s, " ");
-	int i = 1;
-	
-	new_client->setNick(raw_parse[1]);
+    std::vector<std::string> raw_nick;
+    raw_nick = ft_split(s, " ");
+    int i = 1;
+
+	new_client->setNick(raw_nick[1]);
 	if(map.size() == 1)
 		return;
-	if(raw_parse[1][raw_parse[1].size() - 2] == '|')
+	size_t pipe = raw_nick[1].find("|", 0);
+	if (pipe != std::string::npos) // se troviamo giá una pipe nei due nomi uguali
 	{
-		i = (int)raw_parse[1][raw_parse[1].size() - 1] - 47;
-		raw_parse[1].resize(raw_parse[1].size() - 2);
+		raw_nick[1].resize(pipe);
+		new_client->setNick(raw_nick[1]);
 	}
-	for(std::map<int, Client*>::iterator it = map.begin(); it != map.end(); it++)
+	for(std::map<int, Client*>::iterator it = map.begin(); it != map.end(); ++it)
 	{
-		if(it->second->getNick().compare(new_client->getNick()) == 0 && new_client->getSd() != it->first)
+		if(!it->second->getNick().compare(new_client->getNick()) && new_client->getSd() != it->first) //se troviamo due nomi uguali
 		{
-			new_client->setNick(raw_parse[1] + "|" + std::to_string(i));
+			new_client->setNick(raw_nick[1] + "|" + std::to_string(i));
 			i++;
 		}
 	}
 }
 
-void	parse_user(Client *new_client, std::string s, std::map<int, Client*> map){
-    std::vector<std::string>raw_user;
+void	parse_user(Client *new_client, std::string s, std::map<int, Client*> map)
+{
+    std::vector<std::string> raw_user;
     raw_user = ft_split(s, " ");
     int i = 1;
 
 	new_client->setUser(raw_user[1]);
 	if(map.size() == 1)
 		return;
-	if(raw_user[1][raw_user[1].size() - 2] == '|')
+	size_t pipe = raw_user[1].find("|", 0);
+	if (pipe != std::string::npos) // se troviamo giá una pipe nei due nomi uguali
 	{
-		i = (int)raw_user[1][raw_user[1].size() - 1] - 47;
-		raw_user[1].resize(raw_user[1].size() - 2);
+		raw_user[1].resize(pipe);
+		new_client->setUser(raw_user[1]);
 	}
-	for(std::map<int, Client*>::iterator it = map.begin(); it != map.end(); it++)
+	for(std::map<int, Client*>::iterator it = map.begin(); it != map.end(); ++it)
 	{
-		if(it->second->getUser().compare(new_client->getUser()) == 0 && new_client->getSd() != it->first)
+		if(!it->second->getUser().compare(new_client->getUser()) && new_client->getSd() != it->first) //se troviamo due nomi uguali
 		{
 			new_client->setUser(raw_user[1] + "|" + std::to_string(i));
 			i++;
