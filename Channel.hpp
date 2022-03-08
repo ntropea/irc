@@ -21,7 +21,7 @@ class	Channel
 			std::string nickMod;
 			std::string userMod;
 			int			ban_time;
-		};
+		}	Banned;
 		std::vector<Banned>			_banned;
 	public:
 		Channel() {};

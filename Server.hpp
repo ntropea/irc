@@ -126,42 +126,50 @@ class	Server {
 					Channel* chan = findChannel(names[i]);
 					if(chan != NULL)
 					{
-						msg.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
-						send(client->getSd(), msg.c_str(), msg.length(), 0);
-						msg.clear();				
-						chan->insert(client);
-						if (!chan->getTopic().empty())
+						if (chan->bannedFind(client->getNick()) == -1)
 						{
-							msg.append(": 332 " + client->getNick() + " " + chan->getName() + " :" + chan->getTopic() + DEL);
+							msg.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
 							send(client->getSd(), msg.c_str(), msg.length(), 0);
+							msg.clear();				
+							chan->insert(client);
+							if (!chan->getTopic().empty())
+							{
+								msg.append(": 332 " + client->getNick() + " " + chan->getName() + " :" + chan->getTopic() + DEL);
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
+								msg.clear();
+								msg.append(": 333 " + client->getNick() + " " + chan->getName() + " " + chan->getTopicChanger() + " " + std::to_string(chan->getTopicTime()) + DEL);
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
+							}
+							std::vector<Client*> vec = clientInMap(chan->getClientMap());
+							msg.append(":" + client->getNick() + "!~" + client->getUser() + " JOIN :" + names[i] + DEL);
+							sendAll(vec, msg, client);
 							msg.clear();
-							msg.append(": 333 " + client->getNick() + " " + chan->getName() + " " + chan->getTopicChanger() + " " + std::to_string(chan->getTopicTime()) + DEL);
+							for(int k = 0; k != vec.size(); k++)
+							{
+								if (chan->isMod(vec[k]))
+								{
+									msg.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :@" + vec[k]->getNick() + "\n");
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									msg.clear();
+								}
+							}
+							for(int k = 0; k != vec.size(); k++)
+							{
+								if (!chan->isMod(vec[k]))
+								{
+									msg.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :" + vec[k]->getNick() + "\n");
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+									msg.clear();
+								}
+							}
+							msg.append(":127.0.0.1 366 " + client->getNick() + " " + names[i] + " :End of /NAMES list.\n331\n");
 							send(client->getSd(), msg.c_str(), msg.length(), 0);
 						}
-						std::vector<Client*> vec = clientInMap(chan->getClientMap());
-						msg.append(":" + client->getNick() + "!~" + client->getUser() + " JOIN :" + names[i] + DEL);
-						sendAll(vec, msg, client);
-						msg.clear();
-						for(int k = 0; k != vec.size(); k++)
+						else
 						{
-							if (chan->isMod(vec[k]))
-							{
-								msg.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :@" + vec[k]->getNick() + "\n");
-								send(client->getSd(), msg.c_str(), msg.length(), 0);
-								msg.clear();
-							}
+							msg.append(": 474 " + client->getNick() + " " + splitted[1] + " :Cannot join channel (+b)" + DEL);
+							send(client->getSd(), msg.c_str(), msg.length(), 0);
 						}
-						for(int k = 0; k != vec.size(); k++)
-						{
-							if (!chan->isMod(vec[k]))
-							{
-								msg.append(":127.0.0.1 353 " + vec[k]->getNick() + " = " + names[i] + " :" + vec[k]->getNick() + "\n");
-								send(client->getSd(), msg.c_str(), msg.length(), 0);
-								msg.clear();
-							}
-						}
-						msg.append(":127.0.0.1 366 " + client->getNick() + " " + names[i] + " :End of /NAMES list.\n331\n");
-						send(client->getSd(), msg.c_str(), msg.length(), 0);
 					}
 					else
 					{
@@ -458,18 +466,28 @@ class	Server {
 				{
 					if (nicks[k][0] == '#') //se il nick è un channel
 					{
-						if (findChannel(nicks[k]) != NULL)
+						Channel *chan = findChannel(nicks[k]);
+						if (chan != NULL)
 						{
-							if (splitted[2][0] == ':')
+							if (chan->bannedFind(client->getNick()) == -1)
 							{
-								message.erase(0, message.find(':') + 1);
-								msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + message + DEL);
-								sendAll(vec, msg, client);
+								if (splitted[2][0] == ':')
+								{
+									message.erase(0, message.find(':') + 1);
+									msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + message + DEL);
+									sendAll(vec, msg, client);
+								}
+								else
+								{
+									msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + splitted[2] + DEL);
+									sendAll(vec, msg, client);
+								}
 							}
 							else
 							{
-								msg.append(":" + client->getNick() + "!~" + client->getUser() + " PRIVMSG " + nicks[k] + " :" + splitted[2] + DEL);
-								sendAll(vec, msg, client);
+								//: 404 frappinz #ciaociao :Cannot send to channel
+								msg.append(": 404 " + client->getNick() + " " + chan->getName() + " :Cannot send to channel" + DEL);
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
 							}
 							sent = 1;
 						}
