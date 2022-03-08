@@ -205,7 +205,7 @@ void	Server::client_dc(int sd, int i)
 }
 
 
-void	Server::run()
+void	Server::run() //aggiungere signal per ctrl-c e ctrl-d
 {
 	std::string	w = "Welcome to my IRC server! uwu\n";
 	int valread = 0;

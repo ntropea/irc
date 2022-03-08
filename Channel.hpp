@@ -6,15 +6,23 @@ class	Client;
 class	Channel
 {
 	private:
-		std::string				_name;
-		std::map<int, Client*>	_clients;
-		std::vector<Client*>	_modClients;
-		std::vector<Client*>	_halfModClients;
-		std::vector<Client*>	_voiceClients;
-		std::string				_topic;
-		int						_timeCreate;
-		int						_topicTime;
-		std::string				_topicChanger;
+		std::string					_name;
+		std::map<int, Client*>		_clients;
+		std::vector<Client*>		_modClients;
+		std::vector<Client*>		_halfModClients;
+		std::vector<Client*>		_voiceClients;
+		std::string					_topic;
+		int							_timeCreate;
+		int							_topicTime;
+		std::string					_topicChanger;
+		typedef struct Banned
+		{
+			std::string	name;
+			std::string nickMod;
+			std::string userMod;
+			int			ban_time;
+		};
+		std::vector<Banned>			_banned;
 	public:
 		Channel() {};
 		Channel(std::string name, Client *creator) {
@@ -27,11 +35,12 @@ class	Channel
 		std::string 			getName(){return _name;};
 		void					setName(std::string name){ _name = name;};
 		std::string 			getTopic(){return _topic;};
-		void					setTopic(std::string topic){ _topic = topic;};
+		void					setTopic(std::string topic) {_topic = topic;};
 		int						size(){return _clients.size();};
 		Client*					getClient(int sd) {return _clients.find(sd)->second;};
 		std::map<int, Client*>	getClientMap() {return _clients;};
-		std::vector<Client*>	getModClients() { return _modClients;}		
+		std::vector<Client*>	getModClients() { return _modClients;}
+		std::vector<Banned>		getBanned() { return _banned;}		
 		void					insert(Client *client){_clients.insert(std::make_pair(client->getSd(), client));};
 		void					erase(Client *client){
 			_clients.erase(client->getSd());
@@ -105,5 +114,35 @@ class	Channel
 			if (it != _clients.end())
 				return(1);
 			return(0);
+		}
+		int						bannedFind(std::string ban)
+		{
+			for (int i = 0; i < _banned.size(); i++)
+			{
+				if (!_banned[i].name.compare(ban))
+					return (i);
+			}
+			return (-1);
+		}
+		void					bannedInsert(std::string banName, std::string banNickMod, std::string banUserMod)
+		{
+			Banned	inserted;
+			struct timeval time; 
+			gettimeofday(&time, NULL); 
+			inserted.ban_time = time.tv_sec;
+			inserted.name = banName;
+			inserted.nickMod = banNickMod;
+			inserted.userMod = banUserMod;
+			_banned.push_back(inserted);
+		}
+		void					bannedErase(int pos)
+		{
+			std::vector<Banned>::iterator it = _banned.begin();
+			if (pos != -1)
+			{
+				for (int i = 0; i < pos; i++)
+					it++;
+				_banned.erase(it);
+			}
 		}
 };

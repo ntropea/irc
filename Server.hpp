@@ -18,9 +18,6 @@
 #include "Client.hpp"
 #include "Channel.hpp"
 #include "RepliesCreator.hpp"
-#define IP "127.0.0.1"
-#define RPL_NAMREPLY			"353"
-#define RPL_ENDOFNAME			"366"
 
 #define MAX_CLIENTS 30
 
@@ -96,6 +93,7 @@ class	Server {
 
 		/***************************** COMMANDS *****************************/
 		void	userCmd();
+
 		void	pingCmd(Client *client, std::vector<std::string> splitted)
 		{
 			std::string msg;
@@ -109,7 +107,8 @@ class	Server {
 				msg.append("PONG " + splitted[2] + " " + splitted[1] + "\n");
 			send(client->getSd(), msg.c_str(), msg.length(), 0);
 		};
-		void	joinCmd(Client *client, std::vector<std::string> splitted)
+
+		void	joinCmd(Client *client, std::vector<std::string> splitted) //controllare se l'utente, quando cerca di entrare in un canale già esistente, sia nella banlist;
 		{
 			RepliesCreator reply;
 			std::string msg;
@@ -268,7 +267,7 @@ class	Server {
 					send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
 				}
 			}
-			else if (splitted.size() > 3)
+			else if (splitted.size() > 2)
 			{
 				chan = findChannel(splitted[1]);
 				if (chan == NULL)
@@ -393,11 +392,45 @@ class	Server {
 							}
 						}
 					}
+					else if(!splitted[2].compare("+b") || !splitted[2].compare("-b"))
+					{
+						if (splitted.size() == 3)
+						{
+							for (int i = 0; i < chan->getBanned().size(); i++)
+							{
+								msg.append(": 367 " + client->getNick() + " " + splitted[1] + " " + chan->getBanned()[i].name + "!*@* " + chan->getBanned()[i].nickMod + "!~" + chan->getBanned()[i].userMod + " " + std::to_string(chan->getBanned()[i].ban_time) + DEL);
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
+								msg.clear();
+							}
+							msg.append(": 368 " + client->getNick() + " " + splitted[1] + " :End of Channel Ban List" + DEL);
+							send(client->getSd(), msg.c_str(), msg.length(), 0);
+						}
+						else
+						{
+							if (!splitted[2].compare("+b"))
+							{
+								if (chan->bannedFind(splitted[3]) == -1)
+								{
+									chan->bannedInsert(splitted[3], client->getNick(), client->getUser());
+									msg.append(":" + client->getNick() + "!~" + client->getUser() + " MODE " + splitted[1] + " +b " + splitted[3] + "!*@*" + DEL);
+									sendAll(clientInMap(client_map), msg, client);
+									send(client->getSd(), msg.c_str(), msg.length(), 0);
+								}
+							}
+							else
+							{
+								chan->bannedErase(chan->bannedFind(splitted[3]));
+								msg.append(":" + client->getNick() + "!~" + client->getUser() + " MODE " + splitted[1] + " -b " + splitted[3] + "!*@*" + DEL);
+								sendAll(clientInMap(client_map), msg, client);
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
+							}
+						}
+					}
 				}
 			}
 		}
 
-		void	privmsgCmd(Client *client, std::vector<std::string> splitted, char *buffer)
+		void	privmsgCmd(Client *client, std::vector<std::string> splitted, char *buffer) //controllare che chi manda il messaggio sia autorizzato a mandarlo (ban, voice)
 		{
 			std::string					msg;
 			RepliesCreator				reply;
@@ -572,7 +605,6 @@ class	Server {
 				}
 			}
 		}
-		void	motdCmd();
 		void	noticeCmd();
 		void	kickCmd(Client *client, std::vector<std::string> splitted)
 		{
