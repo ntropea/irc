@@ -174,15 +174,17 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 		nickCmd(client, splitted);
 	else if (!strncmp(buffer, "PRIVMSG", 7))
 		privmsgCmd(client, splitted, buffer);
+	else if (!strncmp(buffer, "NOTICE", 6))
+		noticeCmd(client, splitted, buffer);
 	else if (!strncmp(buffer, "WHO", 3))
 		whoCmd(client, splitted);
-	else if (!strncmp(buffer, "MODE", 4))
+	else if (!strncmp(buffer, "MODE", 4) || !strncmp(buffer, "mode", 4))
 		modeCmd(client, splitted);
 	else if (!strncmp(buffer, "PART", 4))
 		partCmd(client, splitted);
 	else if (!strncmp(buffer, "TOPIC", 5))
 		topicCmd(client, splitted, buffer);
-	else if (!strncmp(buffer, "KICK", 4))
+	else if (!strncmp(buffer, "KICK", 4) || !strncmp(buffer, "kick", 4))
 		kickCmd(client, splitted);
 	else
 	{

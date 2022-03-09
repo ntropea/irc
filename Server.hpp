@@ -108,7 +108,7 @@ class	Server {
 			send(client->getSd(), msg.c_str(), msg.length(), 0);
 		};
 
-		void	joinCmd(Client *client, std::vector<std::string> splitted) //controllare se l'utente, quando cerca di entrare in un canale già esistente, sia nella banlist;
+		void	joinCmd(Client *client, std::vector<std::string> splitted) 
 		{
 			RepliesCreator reply;
 			std::string msg;
@@ -126,7 +126,7 @@ class	Server {
 					Channel* chan = findChannel(names[i]);
 					if(chan != NULL)
 					{
-						if (chan->bannedFind(client->getNick()) == -1)
+						if (chan->bannedFind(client->getNick()) == -1 && !chan->allBanned())
 						{
 							msg.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
 							send(client->getSd(), msg.c_str(), msg.length(), 0);
@@ -419,6 +419,16 @@ class	Server {
 							{
 								if (chan->bannedFind(splitted[3]) == -1)
 								{
+									std::cout << "|" << splitted[3] << "|\n";
+									if (!splitted[3].compare("!") || !splitted[3].compare("*!") || !splitted[3].compare("*!*"))
+									{
+										std::cout << "ci entro?\n";
+										chan->setAllBanned(true);
+										msg.append(":" + client->getNick() + "!" + client->getUser() + " MODE " + splitted[1] + " +b " + "!*@*" + DEL);
+										sendAll(clientInMap(client_map), msg, client);
+										send(client->getSd(), msg.c_str(), msg.length(), 0);
+										return ;
+									}
 									chan->bannedInsert(splitted[3], client->getNick(), client->getUser());
 									msg.append(":" + client->getNick() + "!~" + client->getUser() + " MODE " + splitted[1] + " +b " + splitted[3] + "!*@*" + DEL);
 									sendAll(clientInMap(client_map), msg, client);
@@ -427,6 +437,11 @@ class	Server {
 							}
 							else
 							{
+								if (splitted[3] == "!" || splitted[3] == "*!" || splitted[3] == "*!")
+								{
+									chan->setAllBanned(false);
+									return ;
+								}
 								chan->bannedErase(chan->bannedFind(splitted[3]));
 								msg.append(":" + client->getNick() + "!~" + client->getUser() + " MODE " + splitted[1] + " -b " + splitted[3] + "!*@*" + DEL);
 								sendAll(clientInMap(client_map), msg, client);
@@ -469,7 +484,7 @@ class	Server {
 						Channel *chan = findChannel(nicks[k]);
 						if (chan != NULL)
 						{
-							if (chan->bannedFind(client->getNick()) == -1)
+							if (chan->bannedFind(client->getNick()) == -1 || !chan->allBanned())
 							{
 								if (splitted[2][0] == ':')
 								{
@@ -623,7 +638,85 @@ class	Server {
 				}
 			}
 		}
-		void	noticeCmd();
+		void	noticeCmd(Client *client, std::vector<std::string> splitted,  char *buffer)
+		{
+			std::string					msg;
+			RepliesCreator				reply;
+			std::vector<std::string>	nicks;
+			std::string					message(buffer);
+
+			message.pop_back();
+			message.pop_back();
+			if (splitted.size() == 1) // se c'è solo NOTICE
+			{
+				msg.append("411 " + client->getNick() + " :No recipient given (NOTICE)\n");
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+			}
+			else if (splitted.size() < 3) // se non c'è il messaggio da mandare
+			{
+				msg.append("412 " + client->getNick() + " :No text to send\n");
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+			}
+			else //prima devo controllare che il nickname esista, poi subito dopo controllo se c'è un messaggio (splitted[2]...)
+			{
+				nicks = ft_split(splitted[1], ","); //(splitto per ',' per ottenere la lista di utenti e canali a cui mandare il messaggio)
+				std::vector<Client *> vec = clientInMap(client_map);
+				int sent = 0;
+				for (int k = 0; k != nicks.size(); k++)
+				{
+					if (nicks[k][0] == '#') //se il nick è un channel
+					{
+						Channel *chan = findChannel(nicks[k]);
+						if (chan != NULL)
+						{
+							if (chan->bannedFind(client->getNick()) == -1 || !chan->allBanned())
+							{
+								if (splitted[2][0] == ':')
+								{
+									message.erase(0, message.find(':') + 1);
+									msg.append(":" + client->getNick() + "!" + client->getUser() + " NOTICE " + nicks[k] + " :" + message + DEL);
+									sendAll(vec, msg, client);
+								}
+								else
+								{
+									msg.append(":" + client->getNick() + "!" + client->getUser() + " NOTICE " + nicks[k] + " :");
+									int i = 2;
+									while (i != splitted.size())
+									{
+										msg.append(splitted[i] + " ");
+										i++;
+									}
+									msg.append(DEL);
+									sendAll(vec, msg, client);
+									//:frapp!frappinz@IRCItalia-7BBFBF6E.business.telecomitalia.it NOTICE #pupu :ciaoo a ttt
+								}
+							}
+							else
+							{
+								//: 404 frappinz #ciaociao :Cannot send to channel
+								msg.append(": 404 " + client->getNick() + " " + chan->getName() + " :Cannot send to channel" + DEL);
+								send(client->getSd(), msg.c_str(), msg.length(), 0);
+							}
+							sent = 1;
+						}
+					}
+					if (sent == 0)
+					{
+						msg.append("401 " + client->getNick() + " " + nicks[k] + " :No such nick/channel\n");
+						send(client->getSd(), msg.c_str(), msg.length(), 0);
+					}
+					else
+						sent = 0;
+				}
+			}
+
+			//NOTICE
+			//:italia.ircitalia.net 411 frapp|3 :No recipient given (NOTICE)
+			//NOTICE #ca | NOTICE ciao
+			//italia.ircitalia.net 412 frapp|3 :No text to send
+			//NOTICE #ca ciao a tutti | NOTICE #ca :ciao a tutti
+			//rapp|3!frappinz@IRCItalia-7BBFBF6E.business.telecomitalia.it NOTICE #ca :ciao a tutti
+		}
 		void	kickCmd(Client *client, std::vector<std::string> splitted)
 		{
 			std::string msg;
@@ -676,6 +769,13 @@ class	Server {
 					send(client->getSd(), msg.c_str(), msg.length(), 0);
 				}
 			}
+		}
+		void	kickbanCmd(Client *client, std::vector<std::string> splitted)
+		{
+			//mode #aaa +b *!*
+			//kick #aaa frappinz :
+			//:frappinz1!~Francesca MODE #aaa +b *!*
+			//:frappinz1!~Francesca KICK #aaa frappinz :frappinz1
 		}
 		void	inviteCmd();
 		~Server();

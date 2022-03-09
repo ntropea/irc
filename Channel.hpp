@@ -15,6 +15,7 @@ class	Channel
 		int							_timeCreate;
 		int							_topicTime;
 		std::string					_topicChanger;
+		bool						_allBanned;
 		typedef struct Banned
 		{
 			std::string	name;
@@ -40,7 +41,9 @@ class	Channel
 		Client*					getClient(int sd) {return _clients.find(sd)->second;};
 		std::map<int, Client*>	getClientMap() {return _clients;};
 		std::vector<Client*>	getModClients() { return _modClients;}
-		std::vector<Banned>		getBanned() { return _banned;}		
+		std::vector<Banned>		getBanned() { return _banned;}	
+		bool					allBanned() { return _allBanned; }
+		void					setAllBanned(bool ban) { _allBanned = ban; }
 		void					insert(Client *client){_clients.insert(std::make_pair(client->getSd(), client));};
 		void					erase(Client *client){
 			_clients.erase(client->getSd());
