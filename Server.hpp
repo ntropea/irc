@@ -69,7 +69,7 @@ class	Server {
 		void		modeCmd(Client *client, std::vector<std::string>splitted);
 		void		privmsgCmd(Client *client, std::vector<std::string> splitted, char *buffer);
 		void		partCmd(Client *client, std::vector<std::string> splitted);
-		void		listCmd();
+		void		listCmd(Client *client, std::vector<std::string> splitted);
 		void		topicCmd(Client *client, std::vector<std::string> splitted, char *buffer);
 		void		noticeCmd(Client *client, std::vector<std::string> splitted,  char *buffer);
 		void		kickCmd(Client *client, std::vector<std::string> splitted);
@@ -149,6 +149,8 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 		topicCmd(client, splitted, buffer);
 	else if (!strncmp(buffer, "KICK", 4) || !strncmp(buffer, "kick", 4))
 		kickCmd(client, splitted);
+	else if (!strncmp(buffer, "LIST", 4) || !strncmp(buffer, "list", 4))
+		listCmd(client, splitted);
 	else
 	{
 		sent.append("421 " + client->getNick() + " " + splitted[0] + " :Unknown command" + DEL);
@@ -251,7 +253,7 @@ void	parse_user(Client *new_client, std::string s, std::map<int, Client*> map)
 	}
 }
 
-int	parse_info(Client *new_client, char *buffer, int valread, std::map<int, Client*> map)
+int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Client*> map)
 {
 
 	std::vector<std::string>	raw_parse;
@@ -402,7 +404,6 @@ void	Server::sendAll(std::vector<Client*> vec, std::string msg, Client *client)
 }
 
 /***************************** COMMANDS *****************************/
-void	Server::userCmd() {}
 
 void	Server::pingCmd(Client *client, std::vector<std::string> splitted)
 {
@@ -877,7 +878,46 @@ void	Server::partCmd(Client *client, std::vector<std::string> splitted)
 		}
 	}
 }
-void	Server::listCmd() {}
+void	Server::listCmd(Client *client, std::vector<std::string> splitted) 
+{
+	std::string msg;
+	std::vector<std::string> names;
+
+	msg.append(": 321 " + client->getNick() + " Channel :Users  Name" + DEL);
+	send(client->getSd(), msg.c_str(), msg.length(), 0);
+	msg.clear();
+	if (splitted.size() == 1)
+	{
+		for (std::map<std::string, Channel*>::iterator it = channel_map.begin(); it != channel_map.end(); ++it)
+		{
+			msg.append(": 322 " + client->getNick() + " " + it->second->getName() + " " + std::to_string(it->second->getClientMap().size())  + " : " + it->second->getTopic() + DEL);
+			send(client->getSd(), msg.c_str(), msg.length(), 0);
+			msg.clear();
+		}
+	}
+	else
+	{
+		names = ft_split(splitted[1], ",");
+		for (int i = 0; i < names.size(); i++)
+		{
+			std::map<std::string, Channel*>::iterator it = channel_map.find(names[i]);
+			if (names[i][0] != '#')
+			{
+				msg.append(": 521 " + client->getNick() + " :Bad list syntax, type /quote list ? or /raw list ?" + DEL);
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+				msg.clear();
+			}
+			else if (it != channel_map.end())
+			{
+				msg.append(": 322 " + client->getNick() + " " + it->second->getName() + " " + std::to_string(it->second->getClientMap().size()) + " : " + it->second->getTopic() + DEL);
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+				msg.clear();
+			}
+		}
+	}
+	msg.append(": 323 " + client->getNick() + " :End of /LIST" + DEL);
+	send(client->getSd(), msg.c_str(), msg.length(), 0);
+}
 void	Server::topicCmd(Client *client, std::vector<std::string> splitted, char *buffer)
 {
 	std::string	msg;
@@ -1008,13 +1048,6 @@ void	Server::noticeCmd(Client *client, std::vector<std::string> splitted,  char 
 				sent = 0;
 		}
 	}
-
-	//NOTICE
-	//:italia.ircitalia.net 411 frapp|3 :No recipient given (NOTICE)
-	//NOTICE #ca | NOTICE ciao
-	//italia.ircitalia.net 412 frapp|3 :No text to send
-	//NOTICE #ca ciao a tutti | NOTICE #ca :ciao a tutti
-	//rapp|3!frappinz@IRCItalia-7BBFBF6E.business.telecomitalia.it NOTICE #ca :ciao a tutti
 }
 void	Server::kickCmd(Client *client, std::vector<std::string> splitted)
 {
@@ -1069,7 +1102,5 @@ void	Server::kickCmd(Client *client, std::vector<std::string> splitted)
 		}
 	}
 }
-
-void	Server::inviteCmd() {}
 
 Server::~Server(){};
