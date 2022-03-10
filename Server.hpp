@@ -14,19 +14,19 @@
 #include <utility>
 #include <iterator>
 #include <sstream>
-# include <sys/time.h>
+#include <sys/time.h>
+#include <ctime>
 #include "Client.hpp"
 #include "Channel.hpp"
-#include "RepliesCreator.hpp"
 
-#define MAX_CLIENTS 30
+#define DEL "\n"
+#define MAX_CLIENTS 200
 
 class	Client;
 
 class	Channel;
 
 std::vector<std::string>	ft_split(std::string str, std::string token);
-int							parse_info(Client *new_client, char *buffer, int valread);
 
 class	Server {
 	private:
@@ -46,12 +46,16 @@ class	Server {
 		int										new_sd;
 		std::map<int, Client*>					client_map;
 		std::map<std::string, Channel*> 		channel_map;
+		std::string								date;
 	public:
 		Server(){};
 		Server(int port, std::string pass);
 		std::string	getPass() {return pass;};
 		void		client_dc(int sd, int i);
 		void 		run();
+		void		setDate() { time_t now = time(0); date = std::string(ctime(&now));}
+		std::string			getDate() { return date; }
+
 		/* COMANDI */
 		void		parse_commands(Client *client, char *buffer, int valread, int i);
 		void		checkChannels();
@@ -76,8 +80,6 @@ class	Server {
 		std::map<std::string, Channel*>	getChannelMap() { return channel_map; };
 		~Server();
 };
-
-
 
 
 Server::Server(int port, std::string pass)
@@ -113,7 +115,59 @@ Server::Server(int port, std::string pass)
 		perror("Error");
 		exit(EXIT_FAILURE);
 	}
+	setDate();
 };
+
+void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
+{
+	std::string sent;
+	
+	std::vector<std::string> splitted;
+	std::string buf(buffer, (size_t)valread);
+	buf.pop_back();
+	buf.pop_back();
+	splitted = ft_split(buf, " ");
+	if (!strncmp(buffer, "QUIT", 4) || !strncmp(buffer, "quit", 4))
+		client_dc(sd, i); 
+	else if (!strncmp(buffer, "JOIN", 4) || !strncmp(buffer, "join", 4))
+		joinCmd(client, splitted);
+	else if (!strncmp(buffer, "PING", 4))
+		pingCmd(client, splitted);
+	else if (!strncmp(buffer, "NICK", 4) || !strncmp(buffer, "nick", 4))
+		nickCmd(client, splitted);
+	else if (!strncmp(buffer, "PRIVMSG", 7) || !strncmp(buffer, "privmsg", 7))
+		privmsgCmd(client, splitted, buffer);
+	else if (!strncmp(buffer, "NOTICE", 6)  || !strncmp(buffer, "notice", 6))
+		noticeCmd(client, splitted, buffer);
+	else if (!strncmp(buffer, "WHO", 3) || !strncmp(buffer, "who", 3))
+		whoCmd(client, splitted);
+	else if (!strncmp(buffer, "MODE", 4) || !strncmp(buffer, "mode", 4))
+		modeCmd(client, splitted);
+	else if (!strncmp(buffer, "PART", 4) || !strncmp(buffer, "part", 4))
+		partCmd(client, splitted);
+	else if (!strncmp(buffer, "TOPIC", 5) || !strncmp(buffer, "topic", 5))
+		topicCmd(client, splitted, buffer);
+	else if (!strncmp(buffer, "KICK", 4) || !strncmp(buffer, "kick", 4))
+		kickCmd(client, splitted);
+	else
+	{
+		sent.append("421 " + splitted[0] + " :Unknown command" + DEL);
+		send(client->getSd(), sent.c_str(), sent.length(), 0);
+	}
+	checkChannels();
+
+}
+
+void	Server::client_dc(int sd, int i)
+{
+	send(sd, "GOODBYE :)))))))))))\n", 22, 0);
+	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);
+	std::cout << "The disconnected host was named " << client_map.find(sd)->second->getUser() << std::endl;
+	client_map.find(sd)->second->setLogged(false);
+	client_map.erase(sd);
+	close(sd);
+	clients_sd[i] = 0;
+}
 
 std::vector<std::string> ft_split(std::string str, std::string token)
 {
@@ -199,7 +253,7 @@ void	parse_user(Client *new_client, std::string s, std::map<int, Client*> map)
 
 int	parse_info(Client *new_client, char *buffer, int valread, std::map<int, Client*> map)
 {
-	RepliesCreator				reply;
+
 	std::vector<std::string>	raw_parse;
 	std::string					raw_string(buffer, (size_t)valread);
 	std::string					sent;
@@ -208,7 +262,7 @@ int	parse_info(Client *new_client, char *buffer, int valread, std::map<int, Clie
 	raw_parse = ft_split(raw_string, "\r\n");
 	if (!raw_parse[0].compare(0, 5, "PASS :")){
 		parse_nick(new_client, raw_parse[0], map);
-		sent.append(reply.makePasswdMisMatch(new_client->getNick()));
+		sent.append("464 " + new_client->getNick() + " :Password incorrect" + DEL);
 		send(new_client->getSd(), sent.c_str(), sent.length(), 0);
 		return (-1);
 	}
@@ -218,7 +272,7 @@ int	parse_info(Client *new_client, char *buffer, int valread, std::map<int, Clie
 		{
 			if (raw_parse.size() > 1)
 				parse_nick(new_client, raw_parse[1], map);
-			sent.append(reply.makePasswdMisMatch(new_client->getNick()));
+			sent.append("464 " + new_client->getNick() + " :Password incorrect" + DEL);
 			send(new_client->getSd(), sent.c_str(), sent.length(), 0);
 			return (-1);
 		}
@@ -228,63 +282,13 @@ int	parse_info(Client *new_client, char *buffer, int valread, std::map<int, Clie
 		}
 	}
 	new_client->setLogged(true);
-	sent.append(reply.makeWelcome(new_client->getNick(), new_client->getUser(), "Irc"));
-    sent.append(reply.makeYourHost("Irc", "2.1", new_client->getNick()));
-    sent.append(reply.makeCreated("yesterday", new_client->getNick()));
+	sent.append("001 " + new_client->getNick() + " :Welcome to the IRC Network, " + new_client->getUser() + DEL);
+    sent.append("002 " + new_client->getNick() + " :Your host is IRC, running version 2.1" + DEL);
+	sent.append("003 " + new_client->getNick() + " :This server was created " + new_client->server->getDate() + DEL);
     send(new_client->getSd(), sent.c_str(), sent.length(), 0);
 	return (0);
 }
 
-void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
-{
-	std::string sent;
-	RepliesCreator reply;
-	std::vector<std::string> splitted;
-	std::string buf(buffer, (size_t)valread);
-	buf.pop_back();
-	buf.pop_back();
-	splitted = ft_split(buf, " ");
-	if (!strncmp(buffer, "QUIT", 4))
-		client_dc(sd, i); 
-	else if (!strncmp(buffer, "JOIN", 4))
-		joinCmd(client, splitted);
-	else if (!strncmp(buffer, "PING", 4))
-		pingCmd(client, splitted);
-	else if (!strncmp(buffer, "NICK", 4))
-		nickCmd(client, splitted);
-	else if (!strncmp(buffer, "PRIVMSG", 7))
-		privmsgCmd(client, splitted, buffer);
-	else if (!strncmp(buffer, "NOTICE", 6))
-		noticeCmd(client, splitted, buffer);
-	else if (!strncmp(buffer, "WHO", 3))
-		whoCmd(client, splitted);
-	else if (!strncmp(buffer, "MODE", 4) || !strncmp(buffer, "mode", 4))
-		modeCmd(client, splitted);
-	else if (!strncmp(buffer, "PART", 4))
-		partCmd(client, splitted);
-	else if (!strncmp(buffer, "TOPIC", 5))
-		topicCmd(client, splitted, buffer);
-	else if (!strncmp(buffer, "KICK", 4) || !strncmp(buffer, "kick", 4))
-		kickCmd(client, splitted);
-	else
-	{
-		sent.append(reply.makeErrorUnknownCommand(splitted[0]));
-		send(client->getSd(), sent.c_str(), sent.length(), 0);
-	}
-	checkChannels();
-
-}
-
-void	Server::client_dc(int sd, int i)
-{
-	send(sd, "GOODBYE :)))))))))))\n", 22, 0);
-	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);
-	std::cout << "The disconnected host was named " << client_map.find(sd)->second->getUser() << std::endl;
-	client_map.find(sd)->second->setLogged(false);
-	client_map.erase(sd);
-	close(sd);
-	clients_sd[i] = 0;
-}
 
 void	Server::run() //aggiungere signal per ctrl-c e ctrl-d
 {
@@ -403,10 +407,10 @@ void	Server::userCmd() {}
 void	Server::pingCmd(Client *client, std::vector<std::string> splitted)
 {
 	std::string msg;
-	RepliesCreator reply;
+	
 
 	if (splitted.size() < 2)
-		msg.append(reply.makeErrorNoOrigin(client->getNick()));
+		msg.append("409 " + client->getNick() + " :No origin specified" + DEL);
 	else if (splitted.size() == 2)
 		msg.append("PONG " + splitted[1] + "\n");
 	else
@@ -416,7 +420,7 @@ void	Server::pingCmd(Client *client, std::vector<std::string> splitted)
 
 void	Server::joinCmd(Client *client, std::vector<std::string> splitted) 
 {
-	RepliesCreator reply;
+	
 	std::string msg;
 	std::vector<std::string> names;
 	names = ft_split(splitted[1], ",");
@@ -424,7 +428,7 @@ void	Server::joinCmd(Client *client, std::vector<std::string> splitted)
 	{
 		if (names[i][0] != '#')
 		{
-			msg.append(reply.makeErrorNoSuchChannel(client->getNick(), names[i]));
+			msg.append("403 "  + client->getNick() + " " + names[i] + " :No such channel" + DEL);
 			send(client->getSd(), msg.c_str(), msg.length(), 0);
 		}
 		else
@@ -432,7 +436,7 @@ void	Server::joinCmd(Client *client, std::vector<std::string> splitted)
 			Channel* chan = findChannel(names[i]);
 			if(chan != NULL)
 			{
-				if (chan->bannedFind(client->getNick()) == -1 && !chan->allBanned())
+				if (chan->bannedFind(client->getNick()) == -1)
 				{
 					msg.append(":" + client->getNick() + "!" + client->getUser() + "@127.0.0.1 " + splitted[0] + " " + names[i] + "\n");
 					send(client->getSd(), msg.c_str(), msg.length(), 0);
@@ -497,11 +501,10 @@ void	Server::joinCmd(Client *client, std::vector<std::string> splitted)
 void	Server::nickCmd(Client *client, std::vector<std::string> splitted)
 {
 	std::string		msg;
-	RepliesCreator	reply;
 
 	if (splitted.size() == 1)
 	{
-		msg.append(reply.makeErrorNeedMoreParams(client->getNick(), splitted[0]));
+		msg.append( "461 " + client->getNick() + " " + splitted[0] + " :Not enough parameters" + DEL);
 		send(client->getSd(), msg.c_str(), msg.length(), 0);
 	}
 	else
@@ -533,11 +536,11 @@ void	Server::quitCmd(Client *client, std::vector<std::string> splitted) //rifare
 void	Server::whoCmd(Client *client, std::vector<std::string>splitted)
 {
 	std::string msg;
-	RepliesCreator reply;
+	
 	Channel* chan = findChannel(splitted[1]);
 	if(!chan)
 	{
-		msg.append(reply.makeErrorNoSuchChannel(client->getNick(), splitted[1]));
+		msg.append("403 "  + client->getNick() + " " + splitted[1] + " :No such channel" + DEL);
 		send(client->getSd(), msg.c_str(), msg.length(), 0);
 	}
 	else
@@ -545,11 +548,11 @@ void	Server::whoCmd(Client *client, std::vector<std::string>splitted)
 		std::vector<Client*> vec = clientInMap(chan->getClientMap());
 		for(int k = 0; k != vec.size(); k++)
 		{
-			msg = reply.makeWhoReply(vec[k]->getNick(), splitted[1]);
+			msg = "352 " + vec[k]->getNick() + " " + splitted[1] + DEL;
 			send(client->getSd(), msg.c_str(), msg.length(), 0);
 			msg.clear();
 		}
-		msg = reply.makeEndofWhoreply(client->getNick(), splitted[1]);
+		msg = "315 " + client->getNick() + " " + splitted[1] + ":End of WHO list" + DEL;
 		send(client->getSd(), msg.c_str(), msg.length(), 0);
 	}
 }
@@ -752,7 +755,7 @@ void	Server::modeCmd(Client *client, std::vector<std::string>splitted)
 void	Server::privmsgCmd(Client *client, std::vector<std::string> splitted, char *buffer) //controllare che chi manda il messaggio sia autorizzato a mandarlo (ban, voice)
 {
 	std::string					msg;
-	RepliesCreator				reply;
+
 	std::vector<std::string>	nicks;
 	std::string					message(buffer);
 
@@ -937,7 +940,7 @@ void	Server::topicCmd(Client *client, std::vector<std::string> splitted, char *b
 void	Server::noticeCmd(Client *client, std::vector<std::string> splitted,  char *buffer)
 {
 	std::string					msg;
-	RepliesCreator				reply;
+
 	std::vector<std::string>	nicks;
 	std::string					message(buffer);
 

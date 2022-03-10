@@ -1,6 +1,6 @@
 NAME = ircserv
 
-SRCS = main.cpp Server.cpp RepliesCreator.cpp
+SRCS = main.cpp
 
 CC = clang++
 CFLAGS = -Wall -Wextra -Werror -g
