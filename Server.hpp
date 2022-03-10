@@ -151,7 +151,7 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 		kickCmd(client, splitted);
 	else
 	{
-		sent.append("421 " + splitted[0] + " :Unknown command" + DEL);
+		sent.append("421 " + client->getNick() + " " + splitted[0] + " :Unknown command" + DEL);
 		send(client->getSd(), sent.c_str(), sent.length(), 0);
 	}
 	checkChannels();
