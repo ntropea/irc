@@ -52,6 +52,7 @@ class	Server {
 		Server(int port, std::string pass);
 		std::string	getPass() {return pass;};
 		void		client_dc(int sd, int i);
+		void		findAndEraseClient(int sd);
 		void 		run();
 		void		setDate() { time_t now = time(0); date = std::string(ctime(&now));}
 		std::string			getDate() { return date; }
@@ -162,10 +163,33 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 
 }
 
+void	Server::findAndEraseClient(int sd)
+{
+	std::string msg;
+
+	for(std::map<std::string, Channel*>::iterator it = channel_map.begin(); it != channel_map.end(); it++)
+	{
+		Client *client = it->second->getClient(sd);
+		if(client != NULL)
+		{
+			msg.append(":" + client->getNick() + "!" + client->getUser() + " QUIT :Quit: " + client->getNick() + DEL);
+			std::vector<Client*> vec = clientInMap(it->second->getClientMap());
+			sendAll(vec, msg, client);
+			msg.clear();
+			msg.append("ERROR :Closing Link: " + client->getNick() + " (Quit: " + client->getNick() + ")" + DEL);
+			send(client->getSd(), msg.c_str(), msg.length(), 0);
+			it->second->erase(client);
+		}
+	}
+	//:frapp|2!frappinz QUIT :Quit: frapp|2 //sendall
+	//ERROR :Closing Link: frapp|2[host-2-114-8-5.business.telecomitalia.it] (Quit: frapp|2) //a se stesso
+}
+
 void	Server::client_dc(int sd, int i)
 {
 	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);
 	std::cout << "The disconnected host was named " << client_map.find(sd)->second->getUser() << std::endl;
+	findAndEraseClient(sd);
 	client_map.find(sd)->second->setLogged(false);
 	client_map.erase(sd);
 	close(sd);
