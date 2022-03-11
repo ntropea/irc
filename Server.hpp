@@ -60,7 +60,6 @@ class	Server {
 		void		parse_commands(Client *client, char *buffer, int valread, int i);
 		void		checkChannels();
 		void		sendAll(std::vector<Client*> vec, std::string msg, Client *client);
-		void		userCmd();
 		void		pingCmd(Client *client, std::vector<std::string> splitted);
 		void		joinCmd(Client *client, std::vector<std::string> splitted);
 		void		nickCmd(Client *client, std::vector<std::string> splitted);			
@@ -124,7 +123,10 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 	
 	std::vector<std::string> splitted;
 	std::string buf(buffer, (size_t)valread);
-	buf.pop_back();
+	if (buf.size() == 1 && buf[0] == '\n')
+		return ;
+	if (buf.find("\r", 0) != std::string::npos)
+		buf.pop_back();
 	buf.pop_back();
 	splitted = ft_split(buf, " ");
 	if (!strncmp(buffer, "QUIT", 4) || !strncmp(buffer, "quit", 4))
@@ -162,7 +164,6 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 
 void	Server::client_dc(int sd, int i)
 {
-	send(sd, "GOODBYE :)))))))))))\n", 22, 0);
 	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);
 	std::cout << "The disconnected host was named " << client_map.find(sd)->second->getUser() << std::endl;
 	client_map.find(sd)->second->setLogged(false);
@@ -196,8 +197,9 @@ int	parse_pass(Client *new_client, std::string s)
 {
 	std::vector<std::string>	raw_parse;
 	raw_parse = ft_split(s, " :");
-	if (raw_parse[1][raw_parse[1].length()-1] == '\n')
-		raw_parse[1].resize(raw_parse[1].length() - 1); 
+	if (raw_parse[1][raw_parse[1].length() - 1] == '\n')
+		raw_parse[1].resize(raw_parse[1].length() - 1);
+	std::cout << "|" << raw_parse[1] << "|\n"; 
 	if (!new_client->server->getPass().compare(raw_parse[1]))
 		return(1);
 	return (0);
@@ -260,7 +262,7 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 	std::string					raw_string(buffer, (size_t)valread);
 	std::string					sent;
 
-	std::cout << raw_string << std::endl;
+	//std::cout << raw_string << std::endl;
 	raw_parse = ft_split(raw_string, "\r\n");
 	if (!raw_parse[0].compare(0, 5, "PASS :")){
 		parse_nick(new_client, raw_parse[0], map);
@@ -508,15 +510,23 @@ void	Server::nickCmd(Client *client, std::vector<std::string> splitted)
 		msg.append( "461 " + client->getNick() + " " + splitted[0] + " :Not enough parameters" + DEL);
 		send(client->getSd(), msg.c_str(), msg.length(), 0);
 	}
-	else
+	else if (splitted[1].compare(client->getNick()))
 	{
-		if (splitted[1].compare(client->getNick()))
+		for(std::map<int, Client*>::iterator it = client_map.begin(); it != client_map.end(); ++it)
 		{
-			msg.append(":" + client->getNick() + " ");
-			client->setNick(splitted[1]);
-			msg.append("NICK :" + splitted[1] + "\n");
-			send(client->getSd(), msg.c_str(), msg.length(), 0);
+			if (!it->second->getNick().compare(splitted[1]))
+			{
+				//: 433 fra frapp|2 :Nickname is already in use.
+				msg.append(": 433 " + client->getNick() + " " + splitted[1] + " :Nickname is already in use." + DEL);
+				send(client->getSd(), msg.c_str(), msg.length(), 0);
+				return;
+			}
 		}
+		//:bauuu!frappinz NICK :fra
+		msg.append(":" + client->getNick() + "!" + client->getUser() + " NICK :" + splitted[1] + DEL);
+		client->setNick(splitted[1]);
+		//:bau!frappinz NICK :bauuu
+		send(client->getSd(), msg.c_str(), msg.length(), 0);
 	}
 }
 void	Server::quitCmd(Client *client, std::vector<std::string> splitted) //rifare

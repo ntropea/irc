@@ -1,4 +1,11 @@
 #include "Server.hpp"
+#include <csignal>
+
+void signalHandler(int cntrl)
+{
+	std::cout << "\nciao vado via\n";
+	exit(cntrl);
+}
 
 int is_digit(char *str)
 {
@@ -15,6 +22,7 @@ int is_digit(char *str)
 
 int main(int ac, char **av)
 {
+	signal(SIGINT, signalHandler);
 	if (ac != 3)
 	{
 		std::cout << "Error: not valid arguments" << std::endl;
