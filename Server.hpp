@@ -73,7 +73,7 @@ class	Server {
 		void		topicCmd(Client *client, std::vector<std::string> splitted, char *buffer);
 		void		noticeCmd(Client *client, std::vector<std::string> splitted,  char *buffer);
 		void		kickCmd(Client *client, std::vector<std::string> splitted);
-		void		inviteCmd();
+		void		botCmd(Client *client, std::vector<std::string> splitted, char *buffer);
 		/* UTILS*/
 		std::vector<Client*> 			clientInMap(std::map<int, Client*> map);
 		Channel* 						findChannel(std::string nameChannel);
@@ -806,6 +806,11 @@ void	Server::privmsgCmd(Client *client, std::vector<std::string> splitted, char 
 		msg.append("412 " + client->getNick() + " :No text to send\n");
 		send(client->getSd(), msg.c_str(), msg.length(), 0);
 	}
+	else if(!splitted[2].compare("BOT"))
+	{
+		botCmd(client, splitted, buffer);
+		return;
+	}
 	else //prima devo controllare che il nickname esista, poi subito dopo controllo se c'è un messaggio (splitted[2]...)
 	{
 		nicks = ft_split(splitted[1], ","); //(splitto per ',' per ottenere la lista di utenti e canali a cui mandare il messaggio)
@@ -1135,6 +1140,35 @@ void	Server::kickCmd(Client *client, std::vector<std::string> splitted)
 			send(client->getSd(), msg.c_str(), msg.length(), 0);
 		}
 	}
+}
+
+void	Server::botCmd(Client *client, std::vector<std::string> splitted, char *buffer)
+{
+	//PRIVMSG #canale BOT
+	int i = rand() % 10 + 1;
+	std::string msg;
+	
+	if (i == 1)
+		splitted[2] = "Ciao cojoni";
+	if (i == 2)
+		splitted[2] = "Un cane dice ad una papera dove abiti qua";
+	if (i == 3)
+		splitted[2] = "Un bambino casca, si sbuccia le gionocchia e se le mangia";
+	if (i == 4)
+		splitted[2] = "Due bambini dentro una vaca di vomito 'MAMMA LUI SI MANGIA I PEZZI PIU GROSSI'";
+	if (i == 5)
+		splitted[2] = "Una mucca dice ad una mucca 'muuu', 'mi hai tolto le parole di bocca'";
+	if (i == 6)
+		splitted[2] = "Come è morto capitan uncino? si è fatto il bidet con la mano sbagliata";
+	if (i == 7)
+		splitted[2] = "Un maiale casca da un palazzo. fiiiiiiiii SPECK";
+	if (i == 8)
+		splitted[2] = "Sono pelato";
+	if (i == 9)
+		splitted[2] = "Tu zia";
+	if (i == 10)
+		splitted[2] = "SUPPLÍ! Perchè non ridi? Eppure c'è tanto riso.";
+	privmsgCmd(client, splitted, buffer);
 }
 
 Server::~Server(){};
