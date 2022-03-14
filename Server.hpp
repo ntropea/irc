@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <ctime>
 #include <csignal>
+#include <fstream>
 #include "Client.hpp"
 #include "Channel.hpp"
 
@@ -39,13 +40,13 @@ class	Server {
 		int										opt;
 		fd_set									read_set;
 		fd_set									write_set;
-		static int								clients_sd[MAX_CLIENTS];
+		int										clients_sd[MAX_CLIENTS];
 		int										max_sd;
 		int										sd;
 		int										activity;
 		struct timeval 							timeout;
 		int										new_sd;
-		static std::map<int, Client*>			client_map;
+		std::map<int, Client*>			client_map;
 		std::map<std::string, Channel*> 		channel_map;
 		std::string								date;
 	public:
@@ -57,25 +58,10 @@ class	Server {
 		void		setDate() { time_t now = time(0); date = std::string(ctime(&now));}
 		void		sendAll(std::vector<Client*> vec, std::string msg, Client *client);
 		std::string	getDate() { return date; }
-		//void 		signale() { signal(SIGINT, signalHandler);}
-		// static	void static_signalHandler(int cntrl)
-		// {
-		// 	// for(std::map<int, Client *>::iterator it = client_map.begin(); it != client_map.end(); ++it)
-		// 	// {
-		// 	// 	findAndEraseClient(it->second->getSd());
-		// 	// 	client_map.find(it->second->getSd())->second->setLogged(false);
-		// 	// 	client_map.erase(it->second->getSd());
-		// 	// 	close(it->second->getSd());
-		// 	// }
-		// 	// for (int i = 0; i < MAX_CLIENTS; i++)
-		// 	// 	clients_sd[i] = 0;
-		// };
-
 		/* COMANDI */
 		void		parse_commands(Client *client, char *buffer, int valread, int i);
 		void		checkChannels();
 		void		quitCmd(int sd, int i, std::vector<std::string> splitted);
-		void		quitting(void);
 		void		notQuitCmd(int sd, int i);
 		void		pingCmd(Client *client, std::vector<std::string> splitted);
 		void		joinCmd(Client *client, std::vector<std::string> splitted);
@@ -95,17 +81,6 @@ class	Server {
 		std::map<std::string, Channel*>	getChannelMap() { return channel_map; };
 		~Server();
 };
-
-
-void	Server::quitting(void)
-{
-	int i = 0;
-	for(std::map<int, Client *>::iterator it = client_map.begin(); it != client_map.end(); it++)
-	{
-		notQuitCmd(it->second->getSd(), i);
-		i++;
-	}
-}
 
 Server::Server(int port, std::string pass)
 {
@@ -290,7 +265,6 @@ int	parse_pass(Client *new_client, std::string s)
 	raw_parse = ft_split(s, " :");
 	if (raw_parse[1][raw_parse[1].length() - 1] == '\n')
 		raw_parse[1].resize(raw_parse[1].length() - 1);
-	std::cout << "|" << raw_parse[1] << "|\n"; 
 	if (!new_client->server->getPass().compare(raw_parse[1]))
 		return(1);
 	return (0);
@@ -353,7 +327,6 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 	std::string					raw_string(buffer, (size_t)valread);
 	std::string					sent;
 
-	//std::cout << raw_string << std::endl;
 	raw_parse = ft_split(raw_string, "\r\n");
 	if (raw_parse[0].compare(0, 6, "PASS :"))
 	{
@@ -391,10 +364,22 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 
 void	Server::run() //aggiungere signal per ctrl-c e ctrl-d
 {
-	std::string	w = "Welcome to my IRC server! uwu\n";
+    std::string w;
+    std::string f;
+    std::ifstream file("squiddy.txt");
+
+    w.append(": 375 :\n");
+    if (file.is_open())
+         while (file.good())
+         {
+            getline(file, f);
+            w.append(": 372 :" + f + "\n");
+         }
+    w.append(": 376 :End of /MOTD command.\n");
+    file.close();
+    std::cout << w << std::endl;
 	int valread = 0;
 	char buffer[1025];
-	//signale();
 	while (1)
 	{
 		FD_ZERO(&read_set);						//impostiamo tutto a 0
@@ -1239,4 +1224,18 @@ void	Server::botCmd(Client *client, std::vector<std::string> splitted, char *buf
 	privmsgCmd(client, splitted, buffer);
 }
 
-Server::~Server(){};
+Server::~Server()
+{
+	std::vector<Client *> vec = clientInMap(client_map);
+	for(int i = 0; i != vec.size(); i++)
+	{
+		send(vec[i]->getSd(), "Squiddy Mi sono rotto e me ne vado a suonare il clarinetto. Ciao.\n", 73, 0);
+		findAndEraseClient(vec[i]->getSd());
+		client_map.find(vec[i]->getSd())->second->setLogged(false);
+		client_map.erase(vec[i]->getSd());
+		close(vec[i]->getSd());
+	}
+	for (int i = 0; i < MAX_CLIENTS; i++)
+		clients_sd[i] = 0;
+	std::cout << "\nCiao vado a morire" << std::endl;
+};

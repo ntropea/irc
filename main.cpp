@@ -1,5 +1,10 @@
 #include "Server.hpp"
+Server server;
 
+void signalHandler(int ctrl)
+{
+	exit(ctrl);
+}
 
 int is_digit(char *str)
 {
@@ -26,6 +31,8 @@ int main(int ac, char **av)
 		std::cout << "Error: not valid arguments" << std::endl;
 		return (1);
 	}
-	Server server(atoi(av[1]), av[2]);
+	Server server2(atoi(av[1]), av[2]);
+	server = server2;
+	signal(SIGINT, signalHandler);
 	server.run();
 }
