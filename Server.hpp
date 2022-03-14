@@ -16,6 +16,7 @@
 #include <sstream>
 #include <sys/time.h>
 #include <ctime>
+#include <csignal>
 #include "Client.hpp"
 #include "Channel.hpp"
 
@@ -38,35 +39,49 @@ class	Server {
 		int										opt;
 		fd_set									read_set;
 		fd_set									write_set;
-		int										clients_sd[MAX_CLIENTS];
+		static int								clients_sd[MAX_CLIENTS];
 		int										max_sd;
 		int										sd;
 		int										activity;
 		struct timeval 							timeout;
 		int										new_sd;
-		std::map<int, Client*>					client_map;
+		static std::map<int, Client*>			client_map;
 		std::map<std::string, Channel*> 		channel_map;
 		std::string								date;
 	public:
 		Server(){};
 		Server(int port, std::string pass);
 		std::string	getPass() {return pass;};
-		void		client_dc(int sd, int i);
 		void		findAndEraseClient(int sd);
 		void 		run();
 		void		setDate() { time_t now = time(0); date = std::string(ctime(&now));}
-		std::string			getDate() { return date; }
+		void		sendAll(std::vector<Client*> vec, std::string msg, Client *client);
+		std::string	getDate() { return date; }
+		//void 		signale() { signal(SIGINT, signalHandler);}
+		// static	void static_signalHandler(int cntrl)
+		// {
+		// 	// for(std::map<int, Client *>::iterator it = client_map.begin(); it != client_map.end(); ++it)
+		// 	// {
+		// 	// 	findAndEraseClient(it->second->getSd());
+		// 	// 	client_map.find(it->second->getSd())->second->setLogged(false);
+		// 	// 	client_map.erase(it->second->getSd());
+		// 	// 	close(it->second->getSd());
+		// 	// }
+		// 	// for (int i = 0; i < MAX_CLIENTS; i++)
+		// 	// 	clients_sd[i] = 0;
+		// };
 
 		/* COMANDI */
 		void		parse_commands(Client *client, char *buffer, int valread, int i);
 		void		checkChannels();
-		void		sendAll(std::vector<Client*> vec, std::string msg, Client *client);
+		void		quitCmd(int sd, int i, std::vector<std::string> splitted);
+		void		quitting(void);
+		void		notQuitCmd(int sd, int i);
 		void		pingCmd(Client *client, std::vector<std::string> splitted);
 		void		joinCmd(Client *client, std::vector<std::string> splitted);
 		void		nickCmd(Client *client, std::vector<std::string> splitted);			
-		void		quitCmd(Client *client, std::vector<std::string> splitted);
-		void		whoCmd(Client *client, std::vector<std::string>splitted);
-		void		modeCmd(Client *client, std::vector<std::string>splitted);
+		void		whoCmd(Client *client, std::vector<std::string> splitted);
+		void		modeCmd(Client *client, std::vector<std::string> splitted);
 		void		privmsgCmd(Client *client, std::vector<std::string> splitted, char *buffer);
 		void		partCmd(Client *client, std::vector<std::string> splitted);
 		void		listCmd(Client *client, std::vector<std::string> splitted);
@@ -81,6 +96,16 @@ class	Server {
 		~Server();
 };
 
+
+void	Server::quitting(void)
+{
+	int i = 0;
+	for(std::map<int, Client *>::iterator it = client_map.begin(); it != client_map.end(); it++)
+	{
+		notQuitCmd(it->second->getSd(), i);
+		i++;
+	}
+}
 
 Server::Server(int port, std::string pass)
 {
@@ -116,7 +141,8 @@ Server::Server(int port, std::string pass)
 		exit(EXIT_FAILURE);
 	}
 	setDate();
-};
+}
+
 
 void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 {
@@ -131,7 +157,7 @@ void	Server::parse_commands(Client *client, char *buffer, int valread, int i)
 	buf.pop_back();
 	splitted = ft_split(buf, " ");
 	if (!strncmp(buffer, "QUIT", 4) || !strncmp(buffer, "quit", 4))
-		client_dc(sd, i); 
+		quitCmd(sd, i, splitted); 
 	else if (!strncmp(buffer, "JOIN", 4) || !strncmp(buffer, "join", 4))
 		joinCmd(client, splitted);
 	else if (!strncmp(buffer, "PING", 4))
@@ -175,21 +201,62 @@ void	Server::findAndEraseClient(int sd)
 			msg.append(":" + client->getNick() + "!" + client->getUser() + " QUIT :Quit: " + client->getNick() + DEL);
 			std::vector<Client*> vec = clientInMap(it->second->getClientMap());
 			sendAll(vec, msg, client);
-			msg.clear();
-			msg.append("ERROR :Closing Link: " + client->getNick() + " (Quit: " + client->getNick() + ")" + DEL);
-			send(client->getSd(), msg.c_str(), msg.length(), 0);
 			it->second->erase(client);
 		}
 	}
+	msg.clear();
+	msg.append("ERROR :Closing Link: " + client_map.find(sd)->second->getNick() + " (Quit: " + client_map.find(sd)->second->getNick() + ")" + DEL);
+	send(sd, msg.c_str(), msg.length(), 0);
 	//:frapp|2!frappinz QUIT :Quit: frapp|2 //sendall
 	//ERROR :Closing Link: frapp|2[host-2-114-8-5.business.telecomitalia.it] (Quit: frapp|2) //a se stesso
 }
 
-void	Server::client_dc(int sd, int i)
+void	Server::notQuitCmd(int sd, int i)
 {
 	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);
 	std::cout << "The disconnected host was named " << client_map.find(sd)->second->getUser() << std::endl;
 	findAndEraseClient(sd);
+	client_map.find(sd)->second->setLogged(false);
+	client_map.erase(sd);
+	close(sd);
+	clients_sd[i] = 0;
+
+}
+
+void	Server::quitCmd(int sd, int i, std::vector<std::string> splitted)
+{
+	if (splitted.size() == 1)
+	{
+		notQuitCmd(sd, i);
+		return ;
+	}
+	getsockname(sd , (struct sockaddr*)&addr , (socklen_t*)&addrlen);
+	std::cout << "The disconnected host was named " << client_map.find(sd)->second->getUser() << std::endl;
+	std::string msg;
+	int y = 1;
+	std::string quitmsg;
+	while (y <= splitted.size())
+	{
+		quitmsg.append(splitted[y]);
+		quitmsg.append(" ");
+		y++;
+	}
+	if (quitmsg.find(":") != std::string::npos)
+		quitmsg.erase(0,1);
+	msg.append(":" + client_map.find(sd)->second->getNick() + "!" + client_map.find(sd)->second->getUser() + " QUIT :Quit: " + quitmsg + DEL);
+	for(std::map<std::string, Channel*>::iterator it = channel_map.begin(); it != channel_map.end(); it++)
+	{
+		Client *client = it->second->getClient(sd);
+		if(client != NULL)
+		{
+			std::vector<Client*> vec = clientInMap(it->second->getClientMap());
+			sendAll(vec, msg, client);
+			it->second->erase(client);
+		}
+	}
+	msg.clear();
+	msg.append("ERROR :Closing Link: " + client_map.find(sd)->second->getNick() + " (Quit: " + client_map.find(sd)->second->getNick() + ")" + DEL);
+	send(sd, msg.c_str(), msg.length(), 0);
 	client_map.find(sd)->second->setLogged(false);
 	client_map.erase(sd);
 	close(sd);
@@ -288,7 +355,8 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 
 	//std::cout << raw_string << std::endl;
 	raw_parse = ft_split(raw_string, "\r\n");
-	if (!raw_parse[0].compare(0, 5, "PASS :")){
+	if (raw_parse[0].compare(0, 6, "PASS :"))
+	{
 		parse_nick(new_client, raw_parse[0], map);
 		sent.append("464 " + new_client->getNick() + " :Password incorrect" + DEL);
 		send(new_client->getSd(), sent.c_str(), sent.length(), 0);
@@ -304,11 +372,15 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 			send(new_client->getSd(), sent.c_str(), sent.length(), 0);
 			return (-1);
 		}
-		if (raw_parse[1].length()){
-			parse_nick(new_client, raw_parse[1], map);	
+		if (raw_parse[1].length())
+		{
+			parse_nick(new_client, raw_parse[1], map);
 			parse_user(new_client, raw_parse[2], map);
 		}
+
 	}
+	if (new_client->getNick().empty() || new_client->getUser().empty())
+		new_client->setRandomClient();
 	new_client->setLogged(true);
 	sent.append("001 " + new_client->getNick() + " :Welcome to the IRC Network, " + new_client->getUser() + DEL);
     sent.append("002 " + new_client->getNick() + " :Your host is IRC, running version 2.1" + DEL);
@@ -317,12 +389,12 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 	return (0);
 }
 
-
 void	Server::run() //aggiungere signal per ctrl-c e ctrl-d
 {
 	std::string	w = "Welcome to my IRC server! uwu\n";
 	int valread = 0;
 	char buffer[1025];
+	//signale();
 	while (1)
 	{
 		FD_ZERO(&read_set);						//impostiamo tutto a 0
@@ -375,14 +447,14 @@ void	Server::run() //aggiungere signal per ctrl-c e ctrl-d
             if (FD_ISSET(sd, &read_set)) //controllo se qualcuno si é disconnesso e controllo nuovi messaggi
             {
                 if ((valread = read(sd, buffer, 1024)) == 0) //Se ha fatto cntrl c da client
-					client_dc(sd, i);
+					notQuitCmd(sd, i);
                 else
                 {
                     buffer[valread] = '\0';
                     if (client_map.find(sd)->second->getLog() == false) //se é la prima connessione e non ha loggato
 					{
 						if (parse_info(client_map.find(sd)->second, buffer, valread, client_map) == -1)
-							client_dc(sd, i);
+							notQuitCmd(sd, i);
 					}
 					else
                     	parse_commands(client_map.find(sd)->second, buffer, valread, i);
@@ -525,6 +597,8 @@ void	Server::joinCmd(Client *client, std::vector<std::string> splitted)
 	}
 }
 
+
+
 void	Server::nickCmd(Client *client, std::vector<std::string> splitted)
 {
 	std::string		msg;
@@ -548,26 +622,20 @@ void	Server::nickCmd(Client *client, std::vector<std::string> splitted)
 		}
 		//:bauuu!frappinz NICK :fra
 		msg.append(":" + client->getNick() + "!" + client->getUser() + " NICK :" + splitted[1] + DEL);
-		client->setNick(splitted[1]);
-		//:bau!frappinz NICK :bauuu
 		send(client->getSd(), msg.c_str(), msg.length(), 0);
+		client->setNick(splitted[1]);
+		for(std::map<std::string, Channel*>::iterator it = channel_map.begin(); it != channel_map.end(); it++)
+		{
+			if(it->second->getClient(client->getSd()) != NULL)
+			{
+				std::vector<Client*> vec = clientInMap(it->second->getClientMap());
+				sendAll(vec, msg, client);
+			}
+		}
+		//:bau!frappinz NICK :bauuu
 	}
 }
-void	Server::quitCmd(Client *client, std::vector<std::string> splitted) //rifare
-{
-	std::string msg;
-	if (splitted.size() > 1)
-	{
-		for (int i = 1; i < splitted.size(); i++)
-			msg.append(splitted[i]);
-			msg.append (" ");
-	}
-	else
-		msg.append(client->getNick());
-	send(client->getSd(), (msg + "\n").c_str(), (size_t)msg.length() + 1, MSG_OOB);
-	client->setLogged(false);
-	close(client->getSd());
-}
+
 void	Server::whoCmd(Client *client, std::vector<std::string>splitted)
 {
 	std::string msg;
