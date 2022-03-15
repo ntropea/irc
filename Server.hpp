@@ -356,7 +356,6 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 	}
 	if (new_client->getNick().empty() || new_client->getUser().empty())
 		new_client->setRandomClient();
-	std::cout << "*********************** |" << new_client->getNick() << "|\n";
 	new_client->setLogged(true);
 	{
 		std::string w;
@@ -378,17 +377,21 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 	sent.append("001 " + new_client->getNick() + " :Welcome to the IRC Network, " + new_client->getUser() + DEL);
     sent.append("002 " + new_client->getNick() + " :Your host is IRC, running version 2.1" + DEL);
 	sent.append("003 " + new_client->getNick() + " :This server was created " + new_client->server->getDate() + DEL);
-	sent.append(" COMMAND YOU CAN USE:\n\
-			   JOIN 	-> join or create channels\n\
-			   LIST	 	-> list of channels\n\
-			   PART 	-> leave a channel\n\
-			   PRIVMSG 	-> send a message to someone or to a channel\n\
-			   NICK		-> change your nickname\n\
-			   TOPIC	-> change topic of a channel\n\
-			   BOT		-> smile with a joke from our Benjolove!\n\
-MODE COMMAND 
-			
-			   ");
+	sent.append(": 372 :COMMANDS YOU CAN USE:\n\
+: 372 :JOIN 	-> join or create channels\n\
+: 372 :LIST	 	-> list of channels\n\
+: 372 :PART 	-> leave a channel\n\
+: 372 :PRIVMSG 	-> send a message to someone or to a channel\n\
+: 372 :NICK		-> change your nickname\n\
+: 372 :TOPIC	-> change topic of a channel\n\
+: 372 :BOT		-> smile with a joke from our Benjolove!\n\
+: 372 :WHO		-> list of people in a channel\n\
+: 372 :KICK		-> kick a user from a channel (OP/HALFOP ONLY)\n\
+: 372 :MODE	COMMAND FLAGS:\n\
+: 372 :+o/-o	-> op/deop a user in a channel\n\
+: 372 :+h/-h	-> halfop/dehalfop a user in a channel\n\
+: 372 :+v/-v	-> voice/devoice a user in a channel\n\
+: 372 :+b/-b	-> ban/unban a nickname in a channel OR print a banlist if no user is given\n");
     send(new_client->getSd(), sent.c_str(), sent.length(), 0);
 	return (0);
 }
@@ -1092,7 +1095,6 @@ void	Server::topicCmd(Client *client, std::vector<std::string> splitted, char *b
 void	Server::noticeCmd(Client *client, std::vector<std::string> splitted,  char *buffer)
 {
 	std::string					msg;
-
 	std::vector<std::string>	nicks;
 	std::string					message(buffer);
 
@@ -1100,12 +1102,12 @@ void	Server::noticeCmd(Client *client, std::vector<std::string> splitted,  char 
 	message.pop_back();
 	if (splitted.size() == 1) // se c'è solo NOTICE
 	{
-		msg.append("411 " + client->getNick() + " :No recipient given (NOTICE)\n");
+		msg.append(": 411 " + client->getNick() + " :No recipient given (NOTICE)\n");
 		send(client->getSd(), msg.c_str(), msg.length(), 0);
 	}
 	else if (splitted.size() < 3) // se non c'è il messaggio da mandare
 	{
-		msg.append("412 " + client->getNick() + " :No text to send\n");
+		msg.append(": 412 " + client->getNick() + " :No text to send\n");
 		send(client->getSd(), msg.c_str(), msg.length(), 0);
 	}
 	else //prima devo controllare che il nickname esista, poi subito dopo controllo se c'è un messaggio (splitted[2]...)
@@ -1139,12 +1141,10 @@ void	Server::noticeCmd(Client *client, std::vector<std::string> splitted,  char 
 							}
 							msg.append(DEL);
 							sendAll(vec, msg, client);
-							//:frapp!frappinz@IRCItalia-7BBFBF6E.business.telecomitalia.it NOTICE #pupu :ciaoo a ttt
 						}
 					}
 					else
 					{
-						//: 404 frappinz #ciaociao :Cannot send to channel
 						msg.append(": 404 " + client->getNick() + " " + chan->getName() + " :Cannot send to channel" + DEL);
 						send(client->getSd(), msg.c_str(), msg.length(), 0);
 					}
@@ -1153,7 +1153,7 @@ void	Server::noticeCmd(Client *client, std::vector<std::string> splitted,  char 
 			}
 			if (sent == 0)
 			{
-				msg.append("401 " + client->getNick() + " " + nicks[k] + " :No such nick/channel\n");
+				msg.append(": 401 " + client->getNick() + " " + nicks[k] + " :No such nick/channel\n");
 				send(client->getSd(), msg.c_str(), msg.length(), 0);
 			}
 			else
