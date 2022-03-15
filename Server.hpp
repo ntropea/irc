@@ -182,8 +182,6 @@ void	Server::findAndEraseClient(int sd)
 	msg.clear();
 	msg.append("ERROR :Closing Link: " + client_map.find(sd)->second->getNick() + " (Quit: " + client_map.find(sd)->second->getNick() + ")" + DEL);
 	send(sd, msg.c_str(), msg.length(), 0);
-	//:frapp|2!frappinz QUIT :Quit: frapp|2 //sendall
-	//ERROR :Closing Link: frapp|2[host-2-114-8-5.business.telecomitalia.it] (Quit: frapp|2) //a se stesso
 }
 
 void	Server::notQuitCmd(int sd, int i)
@@ -417,8 +415,6 @@ void	Server::run() //aggiungere signal per ctrl-c e ctrl-d
 		activity = select(max_sd + 1, &read_set, NULL, NULL, NULL); //qua rimane in loop
         if ((activity < 0) && (errno != EINTR))
             perror("Error select");
-		//If something happened on the master socket , 
-        //then its an incoming connection
 		if (FD_ISSET(sock, &read_set))
 		{
 			if ((new_sd = accept(sock, (struct sockaddr *)&addr, (socklen_t *)&addrlen)) < 0)
@@ -622,13 +618,11 @@ void	Server::nickCmd(Client *client, std::vector<std::string> splitted)
 		{
 			if (!it->second->getNick().compare(splitted[1]))
 			{
-				//: 433 fra frapp|2 :Nickname is already in use.
 				msg.append(": 433 " + client->getNick() + " " + splitted[1] + " :Nickname is already in use." + DEL);
 				send(client->getSd(), msg.c_str(), msg.length(), 0);
 				return;
 			}
 		}
-		//:bauuu!frappinz NICK :fra
 		msg.append(":" + client->getNick() + "!" + client->getUser() + " NICK :" + splitted[1] + DEL);
 		send(client->getSd(), msg.c_str(), msg.length(), 0);
 		client->setNick(splitted[1]);
@@ -640,7 +634,6 @@ void	Server::nickCmd(Client *client, std::vector<std::string> splitted)
 				sendAll(vec, msg, client);
 			}
 		}
-		//:bau!frappinz NICK :bauuu
 	}
 }
 
@@ -915,7 +908,6 @@ void	Server::privmsgCmd(Client *client, std::vector<std::string> splitted, char 
 					}
 					else
 					{
-						//: 404 frappinz #ciaociao :Cannot send to channel
 						msg.append(": 404 " + client->getNick() + " " + chan->getName() + " :Cannot send to channel" + DEL);
 						send(client->getSd(), msg.c_str(), msg.length(), 0);
 					}
