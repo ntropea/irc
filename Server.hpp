@@ -341,9 +341,11 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 		{
 			if (raw_parse.size() > 1)
 				parse_nick(new_client, raw_parse[1], map);
+			if (new_client->getNick().empty() || new_client->getUser().empty())
+				new_client->setRandomClient();
 			sent.append("464 " + new_client->getNick() + " :Password incorrect" + DEL);
 			send(new_client->getSd(), sent.c_str(), sent.length(), 0);
-			return (-1);
+			return -1;
 		}
 		if (raw_parse[1].length())
 		{
@@ -354,30 +356,46 @@ int		parse_info(Client *new_client, char *buffer, int valread, std::map<int, Cli
 	}
 	if (new_client->getNick().empty() || new_client->getUser().empty())
 		new_client->setRandomClient();
+	std::cout << "*********************** |" << new_client->getNick() << "|\n";
 	new_client->setLogged(true);
+	{
+		std::string w;
+		std::string f;
+		std::ifstream file("squiddy.txt");
+
+		w.append(": 375 :\n");
+		if (file.is_open())
+			while (file.good())
+			{
+				getline(file, f);
+				w.append(": 372 :" + f + "\n");
+			}
+		w.append(": 376 :End of /MOTD command.\n");
+		file.close();
+		send(new_client->getSd(), w.c_str(), w.length(), 0);
+		//std::cout << w << std::endl;
+	}
 	sent.append("001 " + new_client->getNick() + " :Welcome to the IRC Network, " + new_client->getUser() + DEL);
     sent.append("002 " + new_client->getNick() + " :Your host is IRC, running version 2.1" + DEL);
 	sent.append("003 " + new_client->getNick() + " :This server was created " + new_client->server->getDate() + DEL);
+	sent.append(" COMMAND YOU CAN USE:\n\
+			   JOIN 	-> join or create channels\n\
+			   LIST	 	-> list of channels\n\
+			   PART 	-> leave a channel\n\
+			   PRIVMSG 	-> send a message to someone or to a channel\n\
+			   NICK		-> change your nickname\n\
+			   TOPIC	-> change topic of a channel\n\
+			   BOT		-> smile with a joke from our Benjolove!\n\
+MODE COMMAND 
+			
+			   ");
     send(new_client->getSd(), sent.c_str(), sent.length(), 0);
 	return (0);
 }
 
 void	Server::run() //aggiungere signal per ctrl-c e ctrl-d
 {
-    std::string w;
-    std::string f;
-    std::ifstream file("squiddy.txt");
-
-    w.append(": 375 :\n");
-    if (file.is_open())
-         while (file.good())
-         {
-            getline(file, f);
-            w.append(": 372 :" + f + "\n");
-         }
-    w.append(": 376 :End of /MOTD command.\n");
-    file.close();
-    std::cout << w << std::endl;
+  
 	int valread = 0;
 	char buffer[1025];
 	while (1)
@@ -411,6 +429,8 @@ void	Server::run() //aggiungere signal per ctrl-c e ctrl-d
 			 	perror("setsockopt failed");
 				exit(EXIT_FAILURE);
 			}
+			std::string w;
+			w.append ("Welcome! Please insert the password:\n");
 			if ((send(new_sd, w.c_str(), w.length(), 0)) < 0)
 				perror("send");
 			for (int i = 0; i < MAX_CLIENTS; i++) //aggiungiamo il socket all'array di fd
