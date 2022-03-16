@@ -25,7 +25,6 @@ class Client	{
 			int i = rand() % 9999 + 1;
 			_nickname.append("nick#" + std::to_string(i));
 			_username.append("user#" + std::to_string(i));
-			send(_sd, "You can change your NICKNAME by using \"NICK\" followed by your preference\n", 74, 0);
 		}
 };
 
